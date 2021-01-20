@@ -22,42 +22,6 @@ chromepath = "chromedriver.exe"
 driver = webdriver.Chrome(chromepath)
 driver.maximize_window()
 
-leagues = ["england/premier-league/17", "spain/laliga/8"]  # TODO change this too
-
-url = "https://www.sofascore.com/tournament/football/%s" % leagues[0]
-
-# driver.get("https://www.sofascore.com/tournament/football/england/premier-league/17")
-# driver.get("https://www.sofascore.com/tournament/football/spain/laliga/8")
-driver.get(url)
-
-time.sleep(1)
-cookie_button = driver.find_element_by_xpath("//*[@id='onetrust-accept-btn-handler']")
-
-cookie_button.click()
-
-season_select = driver.find_element_by_xpath("//button[@class='styles__Selector-cdd802-4 iDNquT']")
-
-season_select.click()
-# time.sleep(2)
-dropdown_season_select = driver.find_element_by_xpath(
-    "//div[@class='styles__MenuWrapper-cdd802-1 iDYonh']//li[2]")  # TODO change for different seasons LA LIGA
-# dropdown_season_select = driver.find_element_by_xpath(
-#     "//*[@id='downshift-764-item-1']")  # TODO change for different seasons EPL
-
-season = dropdown_season_select.text
-
-dropdown_season_select.click()
-
-# time.sleep(2)
-
-# games_list = driver.find_element_by_xpath("//div[@class='styles__EventListContent-b3g57w-2 dotAOs']")
-
-
-# print(soup)
-
-# games = soup.find_all('a')
-matches = []
-
 
 def getMatches(matches_arr, page_source):
     soup = BeautifulSoup(page_source, 'lxml')
@@ -73,7 +37,6 @@ def getMatches(matches_arr, page_source):
                 if i[0].get('title') == 'FT':
                     home_team = teams[7].text
                     away_team = teams[8].text
-
                     home_score = teams[12].text
                     away_score = teams[13].text
                     data = [date, home_team, away_team, match.get('data-id'), home_score, away_score]
@@ -81,36 +44,83 @@ def getMatches(matches_arr, page_source):
                     matches_arr.append(data)
     return matches_arr
 
+# accept cookies once
+driver.get("https://www.sofascore.com")
+time.sleep(1)
+cookie_button = driver.find_element_by_xpath("//*[@id='onetrust-accept-btn-handler']")
 
-previous = driver.find_elements_by_xpath("//div[@class='Cell-decync-0 styles__EventListHeader-b3g57w-0 bSxBJT']/div[1]")
-while len(previous) > 0:
-    matches = getMatches(matches, driver.page_source)
+cookie_button.click()
 
-    time.sleep(2)
-    # press previous
+leagues = ["england/premier-league/17", "spain/laliga/8"]  # TODO change this too
 
-    # element = driver.find_element(By(("//div[@class='Cell-decync-0 styles__EventListHeader-b3g57w-0 bSxBJT']/div[1]")))
-    # actions = ActionChains(driver)
-    # actions.move_to_element(previous).click().perform()
-    try:
-        previous[0].click()
-    except ElementNotVisibleException:
-        break;
-    # time.sleep(3)
-    previous = driver.find_elements_by_xpath(
-        "//div[@class='Cell-decync-0 styles__EventListHeader-b3g57w-0 bSxBJT']/div[1]")
+for league in leagues:
+    print(league)
+    time.sleep(1)
+    url = "https://www.sofascore.com/tournament/football/%s" % league
+    driver.get(url)
+    # driver.get("https://www.sofascore.com/tournament/football/england/premier-league/17")
+    # driver.get("https://www.sofascore.com/tournament/football/spain/laliga/8")
 
-print(len(matches))
+
+
+
+    for i in range(2, 7):
+        print(i)
+        season_select = driver.find_element_by_xpath("//button[@class='styles__Selector-cdd802-4 iDNquT']")
+
+        season_select.click()
+        # time.sleep(2)
+
+
+        dropdown_season_select = driver.find_element_by_xpath(
+            "//div[@class='styles__MenuWrapper-cdd802-1 iDYonh']//li[%d]" % i)
+
+        season = dropdown_season_select.text
+
+        dropdown_season_select.click()
+
+        # time.sleep(2)
+
+        # games_list = driver.find_element_by_xpath("//div[@class='styles__EventListContent-b3g57w-2 dotAOs']")
+
+        # print(soup)
+
+        # games = soup.find_all('a')
+        matches = []
+
+        previous = driver.find_elements_by_xpath(
+            "//div[@class='Cell-decync-0 styles__EventListHeader-b3g57w-0 bSxBJT']/div[1]")
+        while len(previous) > 0:
+            matches = getMatches(matches, driver.page_source)
+
+            time.sleep(2)
+            # press previous
+
+            # element = driver.find_element(By(("//div[@class='Cell-decync-0 styles__EventListHeader-b3g57w-0 bSxBJT']/div[1]")))
+            # actions = ActionChains(driver)
+            # actions.move_to_element(previous).click().perform()
+            try:
+                previous[0].click()
+            except ElementNotVisibleException:
+                break;
+            # time.sleep(3)
+            previous = driver.find_elements_by_xpath(
+                "//div[@class='Cell-decync-0 styles__EventListHeader-b3g57w-0 bSxBJT']/div[1]")
+
+        print(len(matches))
+
+        for match in matches:
+            match += json_parser(int(match[3]))
+
+        season = season.replace("/", "-")
+        leaguename = league.replace("/", "-")
+
+        filepath = 'data/%s-%s.csv' % (leaguename, season)
+
+        with open(filepath, 'w+', newline='') as myfile:
+            wr = csv.writer(myfile, delimiter=',')
+            wr.writerows(matches)
+
 driver.close()
 
-for match in matches:
-    match += json_parser(int(match[3]))
-
-season = season.replace("/", "-")
-league = leagues[0].replace("/", "-")
-filepath = 'data/%s-%s.csv' % (leagues[0], season)
-
-with open(filepath, 'w+', newline='') as myfile:
-    wr = csv.writer(myfile, delimiter=',')
-    wr.writerows(matches)
 # print(matches)

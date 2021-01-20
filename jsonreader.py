@@ -2,7 +2,7 @@ import urllib.request, json
 
 
 def json_parser(id):
-    print(id)
+    # print(id)
     api_link = "https://api.sofascore.com/api/v1/event/%d/statistics" % id
     with urllib.request.urlopen(api_link) as url:
         data = json.loads(url.read().decode())
