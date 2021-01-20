@@ -21,8 +21,16 @@ chromepath = "chromedriver.exe"
 # firefoxpath = "geckodriver.exe"
 driver = webdriver.Chrome(chromepath)
 driver.maximize_window()
-driver.get("https://www.sofascore.com/tournament/football/england/premier-league/17")
 
+leagues = ["england/premier-league/17", "spain/laliga/8"]  # TODO change this too
+
+url = "https://www.sofascore.com/tournament/football/%s" % leagues[0]
+
+# driver.get("https://www.sofascore.com/tournament/football/england/premier-league/17")
+# driver.get("https://www.sofascore.com/tournament/football/spain/laliga/8")
+driver.get(url)
+
+time.sleep(1)
 cookie_button = driver.find_element_by_xpath("//*[@id='onetrust-accept-btn-handler']")
 
 cookie_button.click()
@@ -32,7 +40,12 @@ season_select = driver.find_element_by_xpath("//button[@class='styles__Selector-
 season_select.click()
 # time.sleep(2)
 dropdown_season_select = driver.find_element_by_xpath(
-    "//*[@id='downshift-2929-item-1']")  # TODO change 1 for different seasons
+    "//div[@class='styles__MenuWrapper-cdd802-1 iDYonh']//li[2]")  # TODO change for different seasons LA LIGA
+# dropdown_season_select = driver.find_element_by_xpath(
+#     "//*[@id='downshift-764-item-1']")  # TODO change for different seasons EPL
+
+season = dropdown_season_select.text
+
 dropdown_season_select.click()
 
 # time.sleep(2)
@@ -64,7 +77,7 @@ def getMatches(matches_arr, page_source):
                     home_score = teams[12].text
                     away_score = teams[13].text
                     data = [date, home_team, away_team, match.get('data-id'), home_score, away_score]
-                    print(data)
+                    # print(data)
                     matches_arr.append(data)
     return matches_arr
 
@@ -90,13 +103,14 @@ while len(previous) > 0:
 print(len(matches))
 driver.close()
 
-
-
-
 for match in matches:
     match += json_parser(int(match[3]))
 
-with open('data/data.csv', 'w+', newline='') as myfile:
+season = season.replace("/", "-")
+league = leagues[0].replace("/", "-")
+filepath = 'data/%s-%s.csv' % (leagues[0], season)
+
+with open(filepath, 'w+', newline='') as myfile:
     wr = csv.writer(myfile, delimiter=',')
     wr.writerows(matches)
-print(matches)
+# print(matches)
