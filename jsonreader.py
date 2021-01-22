@@ -45,27 +45,68 @@ def json_parser(id):
             shots_extra_arr.append(stat2)
 
         # print("shots_extra_arr data " + str(shots_extra_arr))
-        passes = data[4]['statisticsItems']
-        passes_data = []
-        for p in passes:
-            passes_data.append(p['home'])
-            passes_data.append(p['away'])
+        try:
+            passes = data[4]['statisticsItems']
+            passes_data = []
+            pass_categories = ['Passes', 'Accurate passes', 'Long balls', 'Crosses']
+            for n in pass_categories:
+                stat1 = 'N/A'
+                stat2 = 'N/A'
+                for s in passes:
+                    name = s['name']
+                    if n == name:
+                        stat1 = s['home']
+                        stat2 = s['away']
+                        break
+                passes_data.append(stat1)
+                passes_data.append(stat2)
+        except IndexError:
+            passes_data.append('N/A')
+            passes_data.append('N/A')
+            passes_data.append('N/A')
+            passes_data.append('N/A')
+            passes_data.append('N/A')
+            passes_data.append('N/A')
+            passes_data.append('N/A')
+            passes_data.append('N/A')
         # print("passes_data data " + str(passes_data))
 
         duels = data[5]['statisticsItems']
+        duel_categories = ['Dribbles', 'Possession lost', 'Duels won', 'Aerials won']
         duels_data = []
-        for d in duels:
-            duels_data.append(d['home'])
-            duels_data.append(d['away'])
+        for n in duel_categories:
+            stat1 = 'N/A'
+            stat2 = 'N/A'
+            for s in duels:
+                name = s['name']
+                if n == name:
+                    stat1 = s['home']
+                    stat2 = s['away']
+                    break
+            duels_data.append(stat1)
+            duels_data.append(stat2)
         # print("duels_data data " + str(duels_data))
 
         defending_arr = []
+        defending_categories = ['Tackles', 'Interceptions', 'Clearances']
         try:
             defending = data[6]['statisticsItems']
-            for d in defending:
-                defending_arr.append(d['home'])
-                defending_arr.append(d['away'])
+            for n in defending_categories:
+                stat1 = 'N/A'
+                stat2 = 'N/A'
+                for s in defending:
+                    name = s['name']
+                    if n == name:
+                        stat1 = s['home']
+                        stat2 = s['away']
+                        break
+                duels_data.append(stat1)
+                duels_data.append(stat2)
         except IndexError:
+            defending_arr.append('N/A')
+            defending_arr.append('N/A')
+            defending_arr.append('N/A')
+            defending_arr.append('N/A')
             defending_arr.append('N/A')
             defending_arr.append('N/A')
 

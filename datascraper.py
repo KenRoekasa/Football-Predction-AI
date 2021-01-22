@@ -51,7 +51,7 @@ cookie_button = driver.find_element_by_xpath("//*[@id='onetrust-accept-btn-handl
 
 cookie_button.click()
 
-leagues = ["england/premier-league/17", "spain/laliga/8"]  # TODO change this too
+leagues = ["england/premier-league/17", "spain/laliga/8","germany/bundesliga/35","italy/serie-a/23","france/ligue-1/34"]  # TODO change this too
 
 for league in leagues:
     print(league)
@@ -65,7 +65,7 @@ for league in leagues:
 
 
     for i in range(2, 7):
-        print(i)
+
         season_select = driver.find_element_by_xpath("//button[@class='styles__Selector-cdd802-4 iDNquT']")
 
         season_select.click()
@@ -76,7 +76,7 @@ for league in leagues:
             "//div[@class='styles__MenuWrapper-cdd802-1 iDYonh']//li[%d]" % i)
 
         season = dropdown_season_select.text
-
+        print(i)
         dropdown_season_select.click()
 
         # time.sleep(2)
@@ -115,7 +115,7 @@ for league in leagues:
         season = season.replace("/", "-")
         leaguename = league.replace("/", "-")
 
-        filepath = 'data/%s-%s.csv' % (leaguename, season)
+        filepath = 'data/%s-%s.csv' % (leaguename, i)
 
         with open(filepath, 'w+', newline='') as myfile:
             wr = csv.writer(myfile, delimiter=',')
