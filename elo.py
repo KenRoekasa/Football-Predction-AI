@@ -5,7 +5,7 @@ def expectedProbability(Ra, Rb):
 
 
 def elo(Ra, Rb, a_score, b_score):
-    K = 32
+    K = 10
 
     Pb = expectedProbability(Ra, Rb)
 
@@ -29,6 +29,10 @@ def elo(Ra, Rb, a_score, b_score):
 
     print("%d , %d" % (Ra, Rb))
 
+    return round(Ra), round(Rb)
 
-elo(1000, 500, 3, 1)
-elo(500, 1000, 1, 3)
+
+if __name__ == "__main__":
+    Ra, Rb = elo(1000, 500, 3, 1)
+    elo(500, 1000, 1, 3)
+    print(Ra)
