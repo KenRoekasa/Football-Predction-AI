@@ -1,7 +1,7 @@
 def expectedProbability(Ra, Rb):
     c = 10
     d = 400
-    return 1 / 1 + pow(c, ((Rb - Ra) / d))
+    return 1 / (1 + pow(c, ((Rb - Ra) / d)))
 
 
 def elo(Ra, Rb, a_score, b_score):
@@ -33,6 +33,5 @@ def elo(Ra, Rb, a_score, b_score):
 
 
 if __name__ == "__main__":
-    Ra, Rb = elo(1000, 500, 3, 1)
-    elo(500, 1000, 1, 3)
+    Ra, Rb = elo(400, 100, 3, 3)
     print(Ra)
