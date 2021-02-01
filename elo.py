@@ -1,4 +1,4 @@
-def expectedProbability(Ra, Rb):
+def expected_probability(Ra, Rb):
     c = 10
     d = 400
     return 1 / (1 + pow(c, ((Rb - Ra) / d)))
@@ -7,9 +7,9 @@ def expectedProbability(Ra, Rb):
 def elo(Ra, Rb, a_score, b_score):
     K = 10
 
-    Pb = expectedProbability(Ra, Rb)
+    Pb = expected_probability(Ra, Rb)
 
-    Pa = expectedProbability(Rb, Ra)
+    Pa = expected_probability(Rb, Ra)
 
     if a_score > b_score:
 
