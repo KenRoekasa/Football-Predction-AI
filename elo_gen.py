@@ -4,7 +4,7 @@ from elo import elo
 import json
 
 elo_ratings = {}
-
+league__csv = "data/germany-bundesliga-35-2.csv"
 try:
     with open('data/elorating.json') as json_file:
         elo_ratings = json.load(json_file)
@@ -13,7 +13,7 @@ except:
 
 results = []
 
-with open('data/england-premier-league-17-6.csv', mode='r') as csv_file:
+with open(league__csv, mode='r') as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     line_count = 0
     for row in csv_reader:
@@ -41,21 +41,9 @@ for row in results:
 
 print(elo_ratings)
 
-with open("data/england-premier-league-17-6.csv", 'w+', newline='') as myfile:
+with open(league__csv, 'w+', newline='') as myfile:
     wr = csv.writer(myfile, delimiter=',')
     wr.writerows(results)
 
 with open('data/elorating.json', 'w') as fp:
     json.dump(elo_ratings, fp)
-
-# if teama in elo_ratings:
-#     row.append(elo_ratings[teama])
-# else:  # generate new elo rating
-#     elo_ratings[teama] = 1000
-#     row.append(1000)
-#
-# if teamb in elo_ratings:
-#     row.append(elo_ratings[teamb])
-# else:  # generate new elo rating
-#     elo_ratings[teamb] = 1000
-#     row.append(1000)
