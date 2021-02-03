@@ -73,9 +73,109 @@ while previous_button is not None:
 for match in matches:
     driver.get("https://www.whoscored.com%s" % match)
     time.sleep(1)
-    soup = BeautifulSoup(driver.page_source, 'lxml')
-    date = soup.find_all('div', class_="info-block cleared") #[3].find('dl').find_all('dd')
 
+    soup = BeautifulSoup(driver.page_source, 'lxml')
+
+    date = soup.find_all('dd')[4]  # [3].find('dl').find_all('dd')
+    score = soup.find_all('dd')[2]
+    scores = [int(s) for s in score.text.split() if s.isdigit()]
+
+    teams = []
+
+    teams_link = soup.find_all('a', class_='team-link')
+
+    for team in teams_link:
+        if team.text not in teams:
+            teams.append(team.text)
+
+    stats = []
+
+    options_header = driver.find_element_by_xpath("//*[@id='live-chart-stats-options']")
+
+    options = options_header.find_elements_by_tag_name('li')
+
+    for i in range(0, 3):
+        options[i].click()
+
+        if i == 2:
+            break
+        time.sleep(1)
+        stat_selection = driver.find_elements_by_xpath("//div[@class='stat']")
+        soup = BeautifulSoup(driver.page_source, 'lxml')
+        if i == 0:
+            live_goals_info_div = soup.find('div', id='live-goals-info')
+            for stat in live_goals_info_div.find_all('div', class_='stat'):
+                for span in stat.find_all('span', class_='stat-value'):
+                    stats.append(span.text)
+                    print(span.text)
+
+        elif i == 1:
+            live_passes_info_div = soup.find('div', id='live-passes-info')
+            for stat in live_passes_info_div.find_all('div', class_='stat'):
+                for span in stat.find_all('span', class_='stat-value'):
+                    stats.append(span.text)
+
+        for stat in stat_selection:
+            try:
+                stat.click()
+                soup = BeautifulSoup(driver.page_source, 'lxml')
+
+                if i == 0:
+                    live_goals_info_div = soup.find('div', id='live-goals-info')
+                    for stat in live_goals_info_div.find_all('div', class_='stat'):
+                        for span in stat.find_all('span', class_='stat-value'):
+                            stats.append(span.text)
+
+                elif i == 1:
+                    live_passes_info_div = soup.find('div', id='live-passes-info')
+                    for stat in live_passes_info_div.find_all('div', class_='stat'):
+                        for span in stat.find_all('span', class_='stat-value'):
+                            stats.append(span.text)
+
+
+
+
+            except ElementNotVisibleException:
+                pass
+    time.sleep(1)
+    soup = BeautifulSoup(driver.page_source, 'lxml')
+
+    stat_tag = soup.find_all('div', class_='stat-group')
+    for stat in stat_tag[4].find_all('div', class_='stat'):
+        for span in stat.find_all('span', class_='stat-value'):
+            stats.append(span.text)
+
+    stat_selection = driver.find_elements_by_xpath("//div[@class='stat']")
+    live_aggression_info_div = soup.find('div', id='live-aggression-info')
+    for stat in live_aggression_info_div.find_all('div', class_='stat'):
+        for span in stat.find_all('span', class_='stat-value'):
+            stats.append(span.text)
+
+    print(stats)
+
+
+    match_centre_button = driver.find_element_by_xpath("//*[@id='sub-navigation']/ul/li[4]")
+
+    match_centre_button.click()
+    time.sleep(2)
+
+    # Total shots get data
+    # total_shots_more_button = driver.find_element_by_xpath("//*[@id='match-centre-stats']/div[1]/ul[1]/li[2]/div[2]")
+    # total_shots_more_button.click()
+
+    soup = BeautifulSoup(driver.page_source, 'lxml')
+
+    stat_box = soup.find_all('li', class_='match-centre-stat match-centre-sub-stat')
+
+    match_centre_stat = []
+
+    for s in stat_box:
+        for p in s.find_all('span', class_="match-centre-stat-value"):
+            match_centre_stat.append(p.text)
+
+    print(match_centre_stat[:62])
+
+    match_centre_stat = match_centre_stat[:62]
 
 # leagues = ["england/premier-league/17", "spain/laliga/8","germany/bundesliga/35","italy/serie-a/23","france/ligue-1/34"]  # TODO change this too
 
