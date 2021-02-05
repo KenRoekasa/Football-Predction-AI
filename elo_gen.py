@@ -16,28 +16,32 @@ results = []
 with open(league__csv, mode='r') as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     line_count = 0
-    for row in csv_reader:
+    for i, row in enumerate(csv_reader):
         results.append(row)
 
-        if row[1] not in elo_ratings:
-            elo_ratings[row[1]] = 1000
+        if i > 0:
+            # if the team name isn't in the pi-rating dictionary add it in with an initial value
+            if row[1] not in elo_ratings:
+                elo_ratings[row[1]] = 1000
 
 print(elo_ratings)
 
-for row in results:
-    teama = row[1]
-    teamb = row[2]
-    ascore = row[4]
-    bscore = row[5]
-    # print(elo_ratings)
+for i, row in enumerate(results):
 
-    Ra, Rb = elo(int(elo_ratings[teama]), int(elo_ratings[teamb]), int(ascore), int(bscore))
+    if i > 0:
+        teama = row[1]
+        teamb = row[2]
+        ascore = row[4]
+        bscore = row[5]
+        # print(elo_ratings)
 
-    elo_ratings[teama] = Ra
-    elo_ratings[teamb] = Rb
+        Ra, Rb = elo(int(elo_ratings[teama]), int(elo_ratings[teamb]), int(ascore), int(bscore))
 
-    row.append(Ra)
-    row.append(Rb)
+        elo_ratings[teama] = Ra
+        elo_ratings[teamb] = Rb
+
+        row.append(Ra)
+        row.append(Rb)
 
 print(elo_ratings)
 

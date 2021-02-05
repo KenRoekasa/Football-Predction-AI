@@ -17,36 +17,41 @@ results = []
 with open(league__csv, mode='r') as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     line_count = 0
-    for row in csv_reader:
+    for i, row in enumerate(csv_reader):
         results.append(row)
 
-        if row[1] not in pi_ratings:
-            pi_ratings[row[1]] = {}
-            pi_ratings[row[1]]['home'] = 0
-            pi_ratings[row[1]]['away'] = 0
+        # apart from the header
+        if i > 0:
+            # if the team name isn't in the pi-rating dictionary add it in with an initial value
+            if row[1] not in pi_ratings:
+                pi_ratings[row[1]] = {}
+                pi_ratings[row[1]]['home'] = 0
+                pi_ratings[row[1]]['away'] = 0
 
 print(pi_ratings)
 
-for row in results:
-    teama = row[1]
-    teamb = row[2]
-    ascore = row[4]
-    bscore = row[5]
-    # print(elo_ratings)
+for i, row in enumerate(results):
+    # apart from the header
+    if i > 0:
+        teama = row[1]
+        teamb = row[2]
+        ascore = row[4]
+        bscore = row[5]
+        # print(elo_ratings)
 
-    Rah, Raa, Rbh, Rba = pi_rating(float(pi_ratings[teama]['home']), float(pi_ratings[teama]['away']),
-                                   float(pi_ratings[teamb]['home']),
-                                   float(pi_ratings[teamb]['away']), int(ascore), int(bscore))
+        Rah, Raa, Rbh, Rba = pi_rating(float(pi_ratings[teama]['home']), float(pi_ratings[teama]['away']),
+                                       float(pi_ratings[teamb]['home']),
+                                       float(pi_ratings[teamb]['away']), int(ascore), int(bscore))
 
-    pi_ratings[teama]['home'] = Rah
-    pi_ratings[teama]['away'] = Raa
-    pi_ratings[teamb]['home'] = Rbh
-    pi_ratings[teamb]['away'] = Rba
+        pi_ratings[teama]['home'] = Rah
+        pi_ratings[teama]['away'] = Raa
+        pi_ratings[teamb]['home'] = Rbh
+        pi_ratings[teamb]['away'] = Rba
 
-    row.append(Rah)
-    row.append(Raa)
-    row.append(Rbh)
-    row.append(Rba)
+        row.append(Rah)
+        row.append(Raa)
+        row.append(Rbh)
+        row.append(Rba)
 
 print(pi_ratings)
 
