@@ -147,6 +147,7 @@ if len(sys.argv) == 3:
 
         with open(links_csv, 'w+', newline='') as myfile:
             wr = csv.writer(myfile, delimiter=',')
+
             wr.writerow(temp_match_links)
         # print(all_match_stats)
 

@@ -18,9 +18,11 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.wait import WebDriverWait
 
 chromepath = "chromedriver.exe"
-# firefoxpath = "geckodriver.exe"
-driver = webdriver.Chrome(chromepath)
+# driver = webdriver.Chrome(chromepath)
+driver = webdriver.Firefox()
 driver.maximize_window()
+
+
 
 
 def getMatches(matches_arr, page_source):
