@@ -1,3 +1,5 @@
+import json
+import pickle
 import random
 
 import numpy
@@ -27,19 +29,19 @@ def select_random_consecutive_games(table, team, n):  # select random n consecut
 
 
 def get_previous_n_games(table, team, n, game):
-    all_games = get_all_team_games(table, team).sort_values(by=['date'])
-    all_games = all_games.reset_index(drop=False)
+    all_games = get_all_team_games(table, team).sort_values(by=['date']).copy()
+    all_games = all_games.reset_index(drop=True)
     # print(all_games)
 
     index = all_games[all_games['link'] == game['link']].index[0]
 
     if index > n:
-        previous = index - 1 - n
+        previous = index - n
 
     else:
         previous = 0
 
-    previous_games = all_games.iloc[previous:index - 1]
+    previous_games = all_games.iloc[previous:index]
     return previous_games
 
 
@@ -53,31 +55,53 @@ def format_data(data):
          'home shots on target', 'away shots on target', 'home possession', 'away possession',
          'home total conversion rate',
          'away total conversion rate', 'home fouls', 'away fouls', 'home yellow cards', 'away yellow cards',
-         'home red cards', 'away red cards', 'home total passes', 'away total passes', 'home accurate passess',
-         'away accurate passess', 'home open play conversion rate', 'away open play conversion rate',
-         'home set piece conversion', 'away set piece conversion', 'home counter atack shots',
-         'away counter atack shots',
+         'home red cards', 'away red cards', 'home total passes', 'away total passes', 'home accurate passes',
+         'away accurate passes', 'home open play conversion rate', 'away open play conversion rate',
+         'home set piece conversion', 'away set piece conversion', 'home counter attack shots',
+         'away counter attack shots',
          'home counter attack goals', 'away counter attack goals', 'home key passes', 'away key passes',
          'home dribbles attempted', 'away dribbles attempted', 'home dribble success', 'away dribble success',
          'home aerials won%', 'away aerials won%', 'home tackles attempted', 'away tackles attempted',
          'home tackles success %', 'away tackles success %', 'home was dribbled', 'away was dribbled',
          'home interceptions',
-         'away interceptions', 'home dispossesssed', 'away dispossesssed', 'home errors', 'away errors'
-         ]]
+         'away interceptions', 'home dispossessed', 'away dispossessed', 'home errors', 'away errors'
+         ]].copy()
+
+    # data_subset = data[
+    #     ['date', 'link', 'home team', 'away team', 'home score', 'away score', 'home possession', 'away possession',
+    #      'home total conversion rate',
+    #      'away total conversion rate', 'home accurate passes',
+    #      'away accurate passes', 'home open play conversion rate', 'away open play conversion rate',
+    #      'home set piece conversion', 'away set piece conversion',
+    #      'home counter attack goals', 'away counter attack goals', 'home key passes', 'away key passes', 'home dribble success', 'away dribble success',
+    #      'home aerials won%', 'away aerials won%', 'home tackles attempted', 'away tackles attempted',
+    #      'home tackles success %', 'away tackles success %', 'home was dribbled', 'away was dribbled',
+    #      'home interceptions',
+    #      'away interceptions', 'home dispossessed', 'away dispossessed', 'home errors', 'away errors'
+    #      ]].copy()
+
+    # remove percentages symbol
+    percentage_column = ['home total conversion rate',
+                         'away total conversion rate', 'home open play conversion rate',
+                         'away open play conversion rate', 'home set piece conversion', 'away set piece conversion']
+    for column in percentage_column:
+        data_subset[column] = data_subset[column].str.rstrip('%').astype('float64') / 100.0
+    data_subset.dropna(inplace=True)
+    data_subset = data_subset.sort_values(by=['date'])
+    data_subset = data_subset.reset_index(drop=True)
     return data_subset
 
 
 def get_training_data(
-        data):  # Input formatted data and will give an an array of vectors to be inputted into the neural network
-
-    n = 6
+        data):  # TODO comment functions
+    n = 6  # n is the last previous games to get the average from
     training_data = []
-    for i in range(0, 50):
+    for i in range(20, 2260):
         # Select a random team
         # table_of_teams = data['home team'].unique()
         # random_team = data.iloc[random.randrange(0, len(table_of_teams))]['home team']
-        # Select a random gam
-        random_game = data.iloc[random.randrange(0, len(data)-20)]  # exclude the first games of the season
+        # Select a random game
+        random_game = data.iloc[i]
 
         teama = random_game['home team']
         teamb = random_game['away team']
@@ -86,19 +110,24 @@ def get_training_data(
         away_goals = random_game['away score']
 
         if home_goals > away_goals:
-            classification_arr = [1, 0, 0]
+            classification_label = 0  # win
         elif home_goals == away_goals:
-            classification_arr = [0, 1, 0]
+            classification_label = 1  # draw
         else:
-            classification_arr = [0, 0, 1]
+            classification_label = 2  # lose
 
         # print(random_game)
         # find previous n games for each team
 
         teama_previous_games = get_previous_n_games(data, teama, n, random_game)
+        # if previous games is empty recently promoted to the league
+        # if len(teama_previous_games) == 0:
+        #     teama_previous_games = pd.DataFrame(0, index=numpy.arange(1), columns=teama_previous_games.columns)
+
         # print(teama_previous_games)
         teamb_previous_games = get_previous_n_games(data, teamb, n, random_game)
         # print(teamb_previous_games)
+
         teama_mean = get_mean_stats(teama_previous_games, teama)
         teamb_mean = get_mean_stats(teamb_previous_games, teamb)
         # print(teama_mean)
@@ -111,10 +140,53 @@ def get_training_data(
         mean_data_array = numpy.append(teama_mean_array, teamb_mean_array)
         # print(mean_data_array)
 
-        training_data.append([mean_data_array, classification_arr])
+        training_data.append([mean_data_array, classification_label])
     #     print(training_data)
-    print(training_data)
+
     return training_data
+
+
+def get_random_game(csvfile):
+    data = pd.read_csv(csvfile)
+    data_subset = format_data(data)
+    random_game = data_subset.iloc[random.randrange(0, len(data) - 20)]
+    teama = random_game['home team']
+    teamb = random_game['away team']
+    n = 6
+    home_goals = random_game['home score']
+    away_goals = random_game['away score']
+
+    if home_goals > away_goals:
+        classification_label = 0  # win
+    elif home_goals == away_goals:
+        classification_label = 1  # lose
+    else:
+        classification_label = 2  # draw
+
+    # print(random_game)
+    # find previous n games for each team
+
+    teama_previous_games = get_previous_n_games(data_subset, teama, n, random_game)
+
+
+
+
+
+    teamb_previous_games = get_previous_n_games(data_subset, teamb, n, random_game)
+    # print(teamb_previous_games)
+    teama_mean = get_mean_stats(teama_previous_games, teama)
+    teamb_mean = get_mean_stats(teamb_previous_games, teamb)
+    # print(teama_mean)
+    # print(teamb_mean)
+    teama_mean_array = teama_mean.array.to_numpy(copy=True)
+    teamb_mean_array = teamb_mean.array.to_numpy(copy=True)
+    # print(teama_mean_array)
+    # print(teamb_mean_array)
+
+    mean_data_array = numpy.append(teama_mean_array, teamb_mean_array)
+    # print(mean_data_array)
+
+    return [teama, teamb, home_goals, away_goals, mean_data_array, classification_label]
 
 
 def get_mean_stats(previous_games, team):
@@ -136,18 +208,36 @@ def get_mean_stats(previous_games, team):
     away_mean.index = home_mean.index
     combined_table = pd.DataFrame([home_mean, away_mean])
     combined_mean = combined_table.mean(numeric_only=True)
+    combined_mean.fillna(0,inplace=True)
     return combined_mean
 
 
+def merge_premier_league_table():
+    data = pd.read_csv("../data/whoscored/premierleague-20132014.csv")
+    data = data.append(pd.read_csv("../data/whoscored/premierleague-20142015.csv"), ignore_index=True)
+    data = data.append(pd.read_csv("../data/whoscored/premierleague-20152016.csv"), ignore_index=True)
+    data = data.append(pd.read_csv("../data/whoscored/premierleague-20162017.csv"), ignore_index=True)
+    data = data.append(pd.read_csv("../data/whoscored/premierleague-20172018.csv"), ignore_index=True)
+    data = data.append(pd.read_csv("../data/whoscored/premierleague-20182019.csv"), ignore_index=True)
+    data = data.append(pd.read_csv("../data/whoscored/premierleague-20192020.csv"), ignore_index=True)
+    return format_data(data)
+
+
+def load_premier_league_data():
+    with open("../data/whoscored/trainingdata.pickle", "rb") as f:
+        training_data = pickle.load(f)
+        return training_data
+
+
+def generate_premier_league_data():
+    training_data = get_training_data(merge_premier_league_table())
+    with open('../data/whoscored/trainingdata.pickle', 'wb+') as file:
+        pickle.dump(training_data, file)
+
+
+def load_training_data(data):
+    pass
+
+
 if __name__ == '__main__':
-    data = pd.read_csv("../data/whoscored/premierleague-20192020.csv")
-    data_subset = format_data(data)
-
-    # all_games = get_all_team_games(data_subset, 'Manchester United')
-    # # print(all_games)
-    # rand_games = select_random_consecutive_games(data_subset, 'Manchester United', 6)
-    # print(rand_games)
-
-    # print(get_team_home_games(rand_games, 'Manchester United'))
-
-    get_training_data(data_subset)
+    generate_premier_league_data()
