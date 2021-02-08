@@ -14,7 +14,7 @@ DEBUG = 0  # to show debug text
 def get_match_stats(link):
     stats = []
     driver.get("https://www.whoscored.com%s" % link)
-    time.sleep(1)  # let the link load
+    time.sleep(3)  # let the link load
     soup = BeautifulSoup(driver.page_source, 'lxml')
     date = soup.find_all('dd')[4]  # [3].find('dl').find_all('dd')
     score = soup.find_all('dd')[2]
@@ -56,7 +56,7 @@ def get_match_stats(link):
     # Match centre data collection
     match_centre_button = driver.find_element_by_xpath("//*[@id='sub-navigation']/ul/li[4]")
     match_centre_button.click()
-    time.sleep(1)
+    time.sleep(3)
 
     # Total shots get data
     # total_shots_more_button = driver.find_element_by_xpath("//*[@id='match-centre-stats']/div[1]/ul[1]/li[2]/div[2]")
@@ -104,16 +104,15 @@ if len(sys.argv) == 3:
     # leaguename = 'premierleague'
     # filepath = 'data/whoscored/%s-%d.csv' % (leaguename, 20182019)
 
-    chromepath = "chromedriver.exe"
-    driver = webdriver.Chrome(chromepath)
-    # driver = webdriver.Firefox()
+
+    driver = webdriver.Firefox()
     driver.maximize_window()
 
     # accept cookies once
     driver.get("https://www.whoscored.com/")
     driver.implicitly_wait(10)
 
-    time.sleep(1)
+    time.sleep(3)
 
     # accept cookies
 
