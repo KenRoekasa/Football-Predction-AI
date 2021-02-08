@@ -4,8 +4,11 @@ import time
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
-
+import selenium.webdriver.support.expected_conditions as ec
 import sys
+
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
 
 if __name__ == "__main__":
 
@@ -16,14 +19,15 @@ if __name__ == "__main__":
         filepath = sys.argv[1]
         league_url = sys.argv[2]
 
-        chromepath = "chromedriver.exe"
-        driver = webdriver.Chrome(chromepath)
+
+        driver = webdriver.Firefox()
         driver.maximize_window()
 
         driver.get(league_url)
-        time.sleep(1)
 
         # accept cookies
+        wait = WebDriverWait(driver, 100)
+        wait.until(ec.element_to_be_clickable((By.XPATH, "//div[@class='qc-cmp2-summary-buttons']/button[2]")))
 
         cookie_button = driver.find_element_by_xpath("//div[@class='qc-cmp2-summary-buttons']/button[2]")
         cookie_button.click()
@@ -46,7 +50,8 @@ if __name__ == "__main__":
                 previous_button.click()
             except NoSuchElementException:
                 break
-            time.sleep(1)
+            wait = WebDriverWait(driver, 100)
+            wait.until(ec.element_to_be_clickable((By.XPATH, "//a[@class='previous button ui-state-default rc-l is-default']")))
         driver.close()
         with open(filepath, 'w+', newline='') as myfile:
             wr = csv.writer(myfile, delimiter=',')
