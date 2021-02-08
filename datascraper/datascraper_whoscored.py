@@ -6,7 +6,10 @@ import pandas as pd
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
 from tqdm import tqdm
+import selenium.webdriver.support.expected_conditions as ec
 
 DEBUG = 0  # to show debug text
 
@@ -14,7 +17,7 @@ DEBUG = 0  # to show debug text
 def get_match_stats(link):
     stats = []
     driver.get("https://www.whoscored.com%s" % link)
-    time.sleep(3)  # let the link load
+    time.sleep(2)  # let the link load
     soup = BeautifulSoup(driver.page_source, 'lxml')
     date = soup.find_all('dd')[4]  # [3].find('dl').find_all('dd')
     score = soup.find_all('dd')[2]
@@ -38,14 +41,19 @@ def get_match_stats(link):
 
     # gather passing data
     options[1].click()
-    time.sleep(1)
+
+    wait = WebDriverWait(driver,100)
+    wait.until(ec.visibility_of_all_elements_located((By.XPATH,"//div[@id='live-passes-content']//div[@class='stat']")))
+
     # Get box for live score content to click on
     match_report_stat = extract_report_data(match_report_stat, 'live-passes-info',
                                             "//div[@id='live-passes-content']//div[@class='stat']")
 
     # gather aggression data
     options[2].click()
-    time.sleep(1)
+    wait = WebDriverWait(driver, 100)
+    wait.until(ec.visibility_of_all_elements_located((By.ID, "live-aggression")))
+
     soup = BeautifulSoup(driver.page_source, 'lxml')
     aggression_div = soup.find(id='live-aggression')
     for stat in aggression_div.find_all('div', class_='stat'):
@@ -56,11 +64,14 @@ def get_match_stats(link):
     # Match centre data collection
     match_centre_button = driver.find_element_by_xpath("//*[@id='sub-navigation']/ul/li[4]")
     match_centre_button.click()
-    time.sleep(3)
+
+    wait = WebDriverWait(driver, 100)
+    wait.until(ec.element_to_be_clickable((By.XPATH,"//*[@id='match-centre-stats']/div[1]/ul[1]/li[2]/div[2]")))
 
     # Total shots get data
     # total_shots_more_button = driver.find_element_by_xpath("//*[@id='match-centre-stats']/div[1]/ul[1]/li[2]/div[2]")
     # total_shots_more_button.click()
+
     soup = BeautifulSoup(driver.page_source, 'lxml')
     stat_box = soup.find_all('li', class_='match-centre-stat match-centre-sub-stat')
     match_centre_stat = []
@@ -112,7 +123,8 @@ if len(sys.argv) == 3:
     driver.get("https://www.whoscored.com/")
     driver.implicitly_wait(10)
 
-    time.sleep(3)
+    wait = WebDriverWait(driver, 100)
+    wait.until(ec.element_to_be_clickable((By.XPATH, "//div[@class='qc-cmp2-summary-buttons']/button[2]")))
 
     # accept cookies
 
