@@ -2,6 +2,7 @@ import csv
 import sys
 import time
 
+import numpy as np
 import pandas as pd
 
 from bs4 import BeautifulSoup
@@ -42,7 +43,7 @@ def get_match_stats(link):
     # gather passing data
     options[1].click()
 
-    wait = WebDriverWait(driver,100)
+    wait = WebDriverWait(driver,10)
     wait.until(ec.visibility_of_all_elements_located((By.XPATH,"//div[@id='live-passes-content']//div[@class='stat']")))
 
     # Get box for live score content to click on
@@ -51,10 +52,14 @@ def get_match_stats(link):
 
     # gather aggression data
     options[2].click()
-    wait = WebDriverWait(driver, 100)
-    wait.until(ec.visibility_of_all_elements_located((By.ID, "live-aggression")))
+
+    # wait = WebDriverWait(driver, 10)
+    # wait.until(ec.presence_of_all_elements_located((By.ID, "live-aggression")))
+
+    time.sleep(1)
 
     soup = BeautifulSoup(driver.page_source, 'lxml')
+    # print(soup.prettify())
     aggression_div = soup.find(id='live-aggression')
     for stat in aggression_div.find_all('div', class_='stat'):
         for span in stat.find_all('span', class_='stat-value'):
@@ -65,8 +70,9 @@ def get_match_stats(link):
     match_centre_button = driver.find_element_by_xpath("//*[@id='sub-navigation']/ul/li[4]")
     match_centre_button.click()
 
-    wait = WebDriverWait(driver, 100)
-    wait.until(ec.element_to_be_clickable((By.XPATH,"//*[@id='match-centre-stats']/div[1]/ul[1]/li[2]/div[2]")))
+    time.sleep(1)
+    # wait = WebDriverWait(driver, 10)
+    # wait.until(ec.invisibility_of_element_located((By.XPATH,"//*[@class='match-centre-stat has-stats selected']")))
 
     # Total shots get data
     # total_shots_more_button = driver.find_element_by_xpath("//*[@id='match-centre-stats']/div[1]/ul[1]/li[2]/div[2]")
@@ -98,6 +104,11 @@ def extract_report_data(match_report_stat, info_panel_id, clickable_xpath):
     for clickable_stat in clickable_fields:  # click on every stat for more details
         clickable_stat.click()
 
+        wait = WebDriverWait(driver, 10)
+        wait.until(ec.visibility_of_all_elements_located((By.ID, info_panel_id)))
+
+
+
         # Get the page and now scrap the data from the bottom panel
         soup = BeautifulSoup(driver.page_source, 'lxml')
         info_div = soup.find('div', id=info_panel_id)
@@ -115,16 +126,16 @@ if len(sys.argv) == 3:
     # leaguename = 'premierleague'
     # filepath = 'data/whoscored/%s-%d.csv' % (leaguename, 20182019)
 
-
-    driver = webdriver.Firefox()
+    chromepath = "chromedriver.exe"
+    driver = webdriver.Chrome(chromepath)
     driver.maximize_window()
 
     # accept cookies once
     driver.get("https://www.whoscored.com/")
-    driver.implicitly_wait(10)
 
-    wait = WebDriverWait(driver, 100)
+    wait = WebDriverWait(driver, 10)
     wait.until(ec.element_to_be_clickable((By.XPATH, "//div[@class='qc-cmp2-summary-buttons']/button[2]")))
+
 
     # accept cookies
 
@@ -200,8 +211,9 @@ if len(sys.argv) == 3:
         #     wr = csv.writer(myfile, delimiter=',')
         #     wr.writerow(stats)
 
+
         while len(stats) != len(columns):
-            stats.append("N/A")
+            stats.append(np.nan)
 
         all_match_stats.append(stats)
 
@@ -220,7 +232,6 @@ if len(sys.argv) == 3:
             wr = csv.writer(myfile, delimiter=',')
             wr.writerow(temp_match_links)
         # print(all_match_stats)
-
 
     driver.close()
 
