@@ -1,5 +1,6 @@
 tensorflow
-kaggle
 numpy
 selenium
 pandas
+bs4
+lxml
