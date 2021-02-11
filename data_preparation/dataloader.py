@@ -1,13 +1,14 @@
-import json
+import glob
+import os
 import pickle
 import random
 
 import numpy
 import pandas as pd
 
+import config
 
-# pd.set_option("display.max_rows", None, "display.max_columns", None)
-
+pd.set_option("display.max_rows", None, "display.max_columns", None)
 
 def get_team_home_games(table, team):
     return table[table["home team"].str.contains(team)].sort_values(by=['date'])
@@ -32,7 +33,6 @@ def get_previous_n_games(table, team, n, game):
     all_games = get_all_team_games(table, team).sort_values(by=['date']).copy()
     all_games = all_games.reset_index(drop=True)
     # print(all_games)
-
     index = all_games[all_games['link'] == game['link']].index[0]
 
     if index > n:
@@ -64,26 +64,19 @@ def format_data(data):
          'home aerials won%', 'away aerials won%', 'home tackles attempted', 'away tackles attempted',
          'home tackles success %', 'away tackles success %', 'home was dribbled', 'away was dribbled',
          'home interceptions',
-         'away interceptions', 'home dispossessed', 'away dispossessed', 'home errors', 'away errors'
+         'away interceptions', 'home dispossessed', 'away dispossessed', 'home errors', 'away errors', 'home elo',
+         'away elo'
          ]].copy()
-
-    # data_subset = data[
-    #     ['date', 'link', 'home team', 'away team', 'home score', 'away score', 'home possession', 'away possession',
-    #      'home total conversion rate',
-    #      'away total conversion rate', 'home accurate passes',
-    #      'away accurate passes', 'home open play conversion rate', 'away open play conversion rate',
-    #      'home set piece conversion', 'away set piece conversion',
-    #      'home counter attack goals', 'away counter attack goals', 'home key passes', 'away key passes', 'home dribble success', 'away dribble success',
-    #      'home aerials won%', 'away aerials won%', 'home tackles attempted', 'away tackles attempted',
-    #      'home tackles success %', 'away tackles success %', 'home was dribbled', 'away was dribbled',
-    #      'home interceptions',
-    #      'away interceptions', 'home dispossessed', 'away dispossessed', 'home errors', 'away errors'
-    #      ]].copy()
 
     # remove percentages symbol
     percentage_column = ['home total conversion rate',
                          'away total conversion rate', 'home open play conversion rate',
                          'away open play conversion rate', 'home set piece conversion', 'away set piece conversion']
+
+    data_subset = data_subset.loc[:, ~data_subset.columns.duplicated()]
+
+    data_subset['home possession'] = data_subset['home possession'].astype('float64') / 100.0
+    data_subset['away possession'] = data_subset['away possession'].astype('float64') / 100.0
     for column in percentage_column:
         data_subset[column] = data_subset[column].str.rstrip('%').astype('float64') / 100.0
     data_subset.dropna(inplace=True)
@@ -92,11 +85,15 @@ def format_data(data):
     return data_subset
 
 
-def get_training_data(
+
+
+
+
+def create_training_data(
         data):  # TODO comment functions
     n = 6  # n is the last previous games to get the average from
     training_data = []
-    for i in range(20, 2260):
+    for i in range(20, len(data)):
         # Select a random team
         # table_of_teams = data['home team'].unique()
         # random_team = data.iloc[random.randrange(0, len(table_of_teams))]['home team']
@@ -108,6 +105,9 @@ def get_training_data(
 
         home_goals = random_game['home score']
         away_goals = random_game['away score']
+
+        home_elo = random_game['home elo']
+        away_elo = random_game['away elo']
 
         if home_goals > away_goals:
             classification_label = 0  # win
@@ -130,18 +130,34 @@ def get_training_data(
 
         teama_mean = get_mean_stats(teama_previous_games, teama)
         teamb_mean = get_mean_stats(teamb_previous_games, teamb)
+
+        # print(teama_mean)
+
+
         # print(teama_mean)
         # print(teamb_mean)
         teama_mean_array = teama_mean.array.to_numpy(copy=True)
+
         teamb_mean_array = teamb_mean.array.to_numpy(copy=True)
+
+
+
+        teama_mean_array = numpy.append(teama_mean_array, home_elo)
+        teamb_mean_array = numpy.append(teamb_mean_array, away_elo)
+
+
+
+
         # print(teama_mean_array)
         # print(teamb_mean_array)
-
-        mean_data_array = numpy.append(teama_mean_array, teamb_mean_array)
+        # mean_data_array = teama_mean_array - teamb_mean_array
+        mean_data_array = config.combination_of_means(teama_mean_array,teamb_mean_array)
         # print(mean_data_array)
 
         training_data.append([mean_data_array, classification_label])
-    #     print(training_data)
+
+
+
 
     return training_data
 
@@ -152,7 +168,7 @@ def get_random_game(csvfile):
     random_game = data_subset.iloc[random.randrange(0, len(data) - 20)]
     teama = random_game['home team']
     teamb = random_game['away team']
-    n = 6
+    n = 3
     home_goals = random_game['home score']
     away_goals = random_game['away score']
 
@@ -167,10 +183,6 @@ def get_random_game(csvfile):
     # find previous n games for each team
 
     teama_previous_games = get_previous_n_games(data_subset, teama, n, random_game)
-
-
-
-
 
     teamb_previous_games = get_previous_n_games(data_subset, teamb, n, random_game)
     # print(teamb_previous_games)
@@ -208,19 +220,29 @@ def get_mean_stats(previous_games, team):
     away_mean.index = home_mean.index
     combined_table = pd.DataFrame([home_mean, away_mean])
     combined_mean = combined_table.mean(numeric_only=True)
-    combined_mean.fillna(0,inplace=True)
+    combined_mean.fillna(0, inplace=True)
     return combined_mean
 
 
-def merge_premier_league_table():
-    data = pd.read_csv("../data/whoscored/premierleague-20132014.csv")
-    data = data.append(pd.read_csv("../data/whoscored/premierleague-20142015.csv"), ignore_index=True)
-    data = data.append(pd.read_csv("../data/whoscored/premierleague-20152016.csv"), ignore_index=True)
-    data = data.append(pd.read_csv("../data/whoscored/premierleague-20162017.csv"), ignore_index=True)
-    data = data.append(pd.read_csv("../data/whoscored/premierleague-20172018.csv"), ignore_index=True)
-    data = data.append(pd.read_csv("../data/whoscored/premierleague-20182019.csv"), ignore_index=True)
-    data = data.append(pd.read_csv("../data/whoscored/premierleague-20192020.csv"), ignore_index=True)
-    return format_data(data)
+# Merge the csv files for one league to be one dataset
+def merge_seasons(path, csv):
+    owd = os.getcwd()
+    extension = 'csv'
+    os.chdir(path)
+    result = glob.glob('*.{}'.format(extension))
+    data = pd.read_csv(result[0])
+    for i, r in enumerate(result):
+        if i > 0:
+            print()
+            read_csv = pd.read_csv(r)
+            print(str(r) + str(len(read_csv)))
+            data = data.append(read_csv)
+
+    data['date'] = pd.to_datetime(data["date"])
+    data.sort_values(by=['date'], inplace=True)
+    data.reset_index(drop=True, inplace=True)
+    data.to_csv(csv, index=False)
+    os.chdir(owd)
 
 
 def load_premier_league_data():
@@ -230,14 +252,25 @@ def load_premier_league_data():
 
 
 def generate_premier_league_data():
-    training_data = get_training_data(merge_premier_league_table())
-    with open('../data/whoscored/trainingdata.pickle', 'wb+') as file:
+    training_data = create_training_data(merge_seasons())
+    with open('../data/whoscored/premierleague/trainingdata.pickle', 'wb+') as file:
         pickle.dump(training_data, file)
 
 
-def load_training_data(data):
-    pass
+# from the csv with all the data create the training data and save it to a binary file using pickle
+def generate_training_data():
+    data = pd.read_csv("../data/whoscored/all.csv")
+    data = format_data(data)
+    training_data = create_training_data(data)
+    with open('../data/whoscored/alltrainingdata.pickle', 'wb+') as file:
+        pickle.dump(training_data, file)
+
+# load a pickle file of the training data
+def load_training_data(path):
+    with open(path, "rb") as f:
+        training_data = pickle.load(f)
+        return training_data
 
 
 if __name__ == '__main__':
-    generate_premier_league_data()
+    generate_training_data()
