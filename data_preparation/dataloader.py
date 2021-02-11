@@ -6,9 +6,10 @@ import random
 import numpy
 import pandas as pd
 
-import config
+import model.config as config
 
 pd.set_option("display.max_rows", None, "display.max_columns", None)
+
 
 def get_team_home_games(table, team):
     return table[table["home team"].str.contains(team)].sort_values(by=['date'])
@@ -51,47 +52,28 @@ def format_data(data):
 
     # Make a subset of the table to include the fields we need
     data_subset = data[
-        ['date', 'link', 'home team', 'away team', 'home score', 'away score', 'home total shots', 'away total shots',
-         'home shots on target', 'away shots on target', 'home possession', 'away possession',
-         'home total conversion rate',
-         'away total conversion rate', 'home fouls', 'away fouls', 'home yellow cards', 'away yellow cards',
-         'home red cards', 'away red cards', 'home total passes', 'away total passes', 'home accurate passes',
-         'away accurate passes', 'home open play conversion rate', 'away open play conversion rate',
-         'home set piece conversion', 'away set piece conversion', 'home counter attack shots',
-         'away counter attack shots',
-         'home counter attack goals', 'away counter attack goals', 'home key passes', 'away key passes',
-         'home dribbles attempted', 'away dribbles attempted', 'home dribble success', 'away dribble success',
-         'home aerials won%', 'away aerials won%', 'home tackles attempted', 'away tackles attempted',
-         'home tackles success %', 'away tackles success %', 'home was dribbled', 'away was dribbled',
-         'home interceptions',
-         'away interceptions', 'home dispossessed', 'away dispossessed', 'home errors', 'away errors', 'home elo',
-         'away elo'
-         ]].copy()
+        config.COLUMNS].copy()
 
     # remove percentages symbol
-    percentage_column = ['home total conversion rate',
-                         'away total conversion rate', 'home open play conversion rate',
-                         'away open play conversion rate', 'home set piece conversion', 'away set piece conversion']
+    # percentage_column = ['home total conversion rate',
+    #                      'away total conversion rate', 'home open play conversion rate',
+    #                      'away open play conversion rate', 'home set piece conversion', 'away set piece conversion']
 
     data_subset = data_subset.loc[:, ~data_subset.columns.duplicated()]
 
-    data_subset['home possession'] = data_subset['home possession'].astype('float64') / 100.0
-    data_subset['away possession'] = data_subset['away possession'].astype('float64') / 100.0
-    for column in percentage_column:
-        data_subset[column] = data_subset[column].str.rstrip('%').astype('float64') / 100.0
+    # data_subset['home possession'] = data_subset['home possession'].astype('float64') / 100.0
+    # data_subset['away possession'] = data_subset['away possession'].astype('float64') / 100.0
+    # for column in percentage_column:
+    #     data_subset[column] = data_subset[column].str.rstrip('%').astype('float64') / 100.0
     data_subset.dropna(inplace=True)
     data_subset = data_subset.sort_values(by=['date'])
     data_subset = data_subset.reset_index(drop=True)
     return data_subset
 
 
-
-
-
-
 def create_training_data(
         data):  # TODO comment functions
-    n = 6  # n is the last previous games to get the average from
+    n = config.N_PREVIOUS_GAMES  # n is the last previous games to get the average from
     training_data = []
     for i in range(20, len(data)):
         # Select a random team
@@ -133,31 +115,26 @@ def create_training_data(
 
         # print(teama_mean)
 
-
         # print(teama_mean)
         # print(teamb_mean)
         teama_mean_array = teama_mean.array.to_numpy(copy=True)
 
         teamb_mean_array = teamb_mean.array.to_numpy(copy=True)
 
-
-
         teama_mean_array = numpy.append(teama_mean_array, home_elo)
         teamb_mean_array = numpy.append(teamb_mean_array, away_elo)
 
-
-
+        mean_array_sum = (teamb_mean_array + teama_mean_array)
+        teama_mean_array_norm = numpy.divide(teama_mean_array, mean_array_sum,where=mean_array_sum!=0)
+        teamb_mean_array_norm = numpy.divide(teamb_mean_array, mean_array_sum,where=mean_array_sum!=0)
 
         # print(teama_mean_array)
         # print(teamb_mean_array)
         # mean_data_array = teama_mean_array - teamb_mean_array
-        mean_data_array = config.combination_of_means(teama_mean_array,teamb_mean_array)
+        mean_data_array = config.combination_of_means(teama_mean_array_norm, teamb_mean_array_norm)
         # print(mean_data_array)
 
         training_data.append([mean_data_array, classification_label])
-
-
-
 
     return training_data
 
@@ -190,12 +167,17 @@ def get_random_game(csvfile):
     teamb_mean = get_mean_stats(teamb_previous_games, teamb)
     # print(teama_mean)
     # print(teamb_mean)
+
     teama_mean_array = teama_mean.array.to_numpy(copy=True)
     teamb_mean_array = teamb_mean.array.to_numpy(copy=True)
     # print(teama_mean_array)
     # print(teamb_mean_array)
 
-    mean_data_array = numpy.append(teama_mean_array, teamb_mean_array)
+    # normalise values
+    teama_mean_array_norm = teama_mean_array / (teamb_mean_array + teama_mean_array)
+    teamb_mean_array_norm = teamb_mean_array / (teamb_mean_array + teama_mean_array)
+
+    mean_data_array = numpy.append(teama_mean_array_norm, teamb_mean_array_norm)
     # print(mean_data_array)
 
     return [teama, teamb, home_goals, away_goals, mean_data_array, classification_label]
@@ -264,6 +246,7 @@ def generate_training_data():
     training_data = create_training_data(data)
     with open('../data/whoscored/alltrainingdata.pickle', 'wb+') as file:
         pickle.dump(training_data, file)
+
 
 # load a pickle file of the training data
 def load_training_data(path):
