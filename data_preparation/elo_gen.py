@@ -1,53 +1,75 @@
 import csv
+import sys
+
+import numpy as np
+
+
+import json
+import pandas as pd
 
 from elo import elo
-import json
 
-elo_ratings = {}
-league__csv = "data/germany-bundesliga-35-2.csv"
-try:
-    with open('data/elorating.json') as json_file:
-        elo_ratings = json.load(json_file)
-except:
-    pass
+if len(sys.argv) == 3:
+    elo_ratings = {}
 
-results = []
+    league_csv = sys.argv[1]
 
-with open(league__csv, mode='r') as csv_file:
-    csv_reader = csv.reader(csv_file, delimiter=',')
-    line_count = 0
-    for i, row in enumerate(csv_reader):
-        results.append(row)
+    elorating_json = sys.argv[2]
+    try:
+        with open(elorating_json) as json_file:
+            elo_ratings = json.load(json_file)
+    except:
+        pass
 
-        if i > 0:
-            # if the team name isn't in the pi-rating dictionary add it in with an initial value
-            if row[1] not in elo_ratings:
-                elo_ratings[row[1]] = 1000
 
-print(elo_ratings)
+    matches = pd.read_csv(league_csv)
 
-for i, row in enumerate(results):
 
-    if i > 0:
-        teama = row[1]
-        teamb = row[2]
-        ascore = row[4]
-        bscore = row[5]
-        # print(elo_ratings)
+    for i, match in matches.iterrows():
+        # if the team name isn't in the pi-rating dictionary add it in with an initial value
+        if match.loc['home team'] not in elo_ratings:
+            elo_ratings[match['home team']] = 1000
+
+
+    print(elo_ratings)
+
+
+    matches['date'] = pd.to_datetime(matches["date"])
+    sorted_matches = matches.sort_values(by=['date']).copy()
+
+
+
+
+    for i, row in sorted_matches.iterrows():
+        teama = row['home team']
+        teamb = row['away team']
+        ascore = row['home score']
+        bscore = row['away score']
 
         Ra, Rb = elo(int(elo_ratings[teama]), int(elo_ratings[teamb]), int(ascore), int(bscore))
 
+        # Set in the elo in the dictionary
         elo_ratings[teama] = Ra
         elo_ratings[teamb] = Rb
 
-        row.append(Ra)
-        row.append(Rb)
 
-print(elo_ratings)
+        # print(row)
+        # Add the elo to the table
 
-with open(league__csv, 'w+', newline='') as myfile:
-    wr = csv.writer(myfile, delimiter=',')
-    wr.writerows(results)
+        sorted_matches._set_value(i, 'home elo', Ra)
+        sorted_matches._set_value(i, 'away elo', Rb)
+        # row['home elo'] = Ra
+        # print(row)
+        # row['away elo'] = Rb
 
-with open('data/elorating.json', 'w') as fp:
-    json.dump(elo_ratings, fp)
+
+
+    # write back into the csv
+    sorted_matches.to_csv(league_csv,index=False)
+
+
+    with open(elorating_json, 'w') as fp:
+        json.dump(elo_ratings, fp)
+
+else:
+    print("Invalid arguments elo_gen.py [csvfile] [elorating csv file name]")

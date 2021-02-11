@@ -1,3 +1,4 @@
+
 def expected_probability(Ra, Rb):
     c = 10
     d = 400
