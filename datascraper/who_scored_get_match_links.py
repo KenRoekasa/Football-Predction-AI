@@ -19,8 +19,8 @@ if __name__ == "__main__":
         filepath = sys.argv[1]
         league_url = sys.argv[2]
 
-
-        driver = webdriver.Firefox()
+        chromepath = "chromedriver.exe"
+        driver = webdriver.Chrome(chromepath)
         driver.maximize_window()
 
         driver.get(league_url)
@@ -50,8 +50,9 @@ if __name__ == "__main__":
                 previous_button.click()
             except NoSuchElementException:
                 break
-            wait = WebDriverWait(driver, 100)
-            wait.until(ec.element_to_be_clickable((By.XPATH, "//a[@class='previous button ui-state-default rc-l is-default']")))
+            time.sleep(0.1)
+            # wait = WebDriverWait(driver, 2)
+            # wait.until(ec.element_to_be_clickable((By.XPATH, "//a[@class='previous button ui-state-default rc-l is-default']")))
         driver.close()
         with open(filepath, 'w+', newline='') as myfile:
             wr = csv.writer(myfile, delimiter=',')
