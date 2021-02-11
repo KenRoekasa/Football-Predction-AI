@@ -1,3 +1,4 @@
 footballproject/
 data/
 __pycache__/
+model/logs/
