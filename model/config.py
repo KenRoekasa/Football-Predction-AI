@@ -1,7 +1,16 @@
 # Config file for the model of the neural network
 import time
 import numpy as np
-import tensorflow as tf
+from tensorboard.plugins.hparams import api as hp
+
+METRIC_ACCURACY = 'accuracy'
+
+
+HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([24, 89]))
+HP_DROPOUT = hp.HParam('dropout', hp.Discrete(np.round(np.arange(float(0.5), float(0.9), 0.1),1)))
+# HP_OPTIMIZER = hp.HParam('optimizer', hp.Discrete(['adam', 'sgd']))
+HP_LR = hp.HParam('learning_rate',hp.Discrete(np.round(np.arange(float(0.001), float(0.011), 0.001),3)))
+HP_BATCH_SIZE = hp.HParam('batch_size',hp.Discrete([1,2,10,32,64,100]))
 
 
 
@@ -15,10 +24,10 @@ DROPOUT_VALUE = 0.8
 
 LEARNING_RATE = 0.001
 MOMENTUM = 0.01
-BATCH_SIZE = 2
+BATCH_SIZE = 50
 time = time.strftime("%Y-%m-%d-%H-%M-%S", time.gmtime())
 NAME = 'model-%s-lr=%f-momentum=%f-batch-size=%d-dropout=%d-24' % (time, LEARNING_RATE,MOMENTUM,BATCH_SIZE,DROPOUT_VALUE)
-OPT = tf.keras.optimizers.SGD(lr=LEARNING_RATE, momentum=MOMENTUM)
+
 
 N_PREVIOUS_GAMES = 3
 

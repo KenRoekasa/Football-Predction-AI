@@ -1,9 +1,13 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+import time
 
 import numpy as np
 
 from data_preparation.dataloader import load_training_data
+
 import tensorflow as tf
-import config
+import model.config as cf
 from tensorboard.plugins.hparams import api as hp
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -14,21 +18,8 @@ try:
 except RuntimeError as e:
     print(e)
 
-tensorboard = tf.keras.callbacks.TensorBoard(log_dir="logs/{}".format(config.NAME))
-
-HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([24, 90]))
-HP_DROPOUT = hp.HParam('dropout', hp.RealInterval(0.5, 0.8))
-HP_OPTIMIZER = hp.HParam('optimizer', hp.Discrete(['adam', 'sgd']))
-
-METRIC_ACCURACY = 'accuracy'
-
-with tf.summary.create_file_writer('logs/hparam_tuning').as_default():
-  hp.hparams_config(
-    hparams=[HP_NUM_UNITS, HP_DROPOUT, HP_OPTIMIZER],
-    metrics=[hp.Metric(METRIC_ACCURACY, display_name='Accuracy')],
-  )
-
-
+tf.get_logger().setLevel('ERROR')
+tf.autograph.set_verbosity(1)
 
 def prepare_data():
     training_data = load_training_data('../data/whoscored/alltrainingdata.pickle')  # Get premier league data
@@ -54,28 +45,46 @@ def prepare_data():
 x_train, y_train = prepare_data()
 # x_test, y_test = prepare_data()
 
-model = tf.keras.models.Sequential()
 
 
 
+def train_test_model(logdir,hparams):
+    OPT = tf.keras.optimizers.SGD(lr=hparams[cf.HP_LR], momentum=cf.MOMENTUM)
 
-for layer in config.NETWORK_TOPOLOGY:
-    model.add(tf.keras.layers.Dense(layer, activation=tf.nn.relu, input_dim=config.INPUT_DIM))
+    model = tf.keras.models.Sequential()
+    model.add(tf.keras.layers.Dense(hparams[cf.HP_NUM_UNITS], activation=tf.nn.relu, input_dim=cf.INPUT_DIM))
+    model.add(tf.keras.layers.Dropout(hparams[cf.HP_DROPOUT]))
+    model.add(tf.keras.layers.Dense(3, activation=tf.nn.softmax))
 
-model.add(tf.keras.layers.Dropout(config.DROPOUT_VALUE))
-model.add(tf.keras.layers.Dense(3, activation=tf.nn.softmax))
+    model.compile(optimizer=OPT, loss='sparse_categorical_crossentropy',
+            metrics=['accuracy'])
 
+    callbacks = [
+        tf.keras.callbacks.TensorBoard(logdir),  # log metrics
+        hp.KerasCallback(logdir, hparams),  # log hparams
+    ]
 
-# plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
+    model.fit(x_train, y_train, epochs=5, batch_size=hparams[cf.HP_BATCH_SIZE],shuffle=True, verbose=1,callbacks=callbacks, validation_split=0.1)
+    _, accuracy = model.evaluate(x_train, y_train)
 
-# opt = tf.keras.optimizers.Adam(lr=0.001)
-model.compile(optimizer=config.OPT, loss='sparse_categorical_crossentropy',
-              metrics=['accuracy'])
+    return accuracy
 
-model.fit(x_train, y_train, epochs=500, batch_size=config.BATCH_SIZE, shuffle=True, callbacks=[tensorboard], validation_split=0.1)
-
-
-
+session_num = 0
+for lr in cf.HP_LR.domain.values:
+    for batch_size in cf.HP_BATCH_SIZE.domain.values:
+        for num_units in cf.HP_NUM_UNITS.domain.values:
+          for dropout_rate in cf.HP_DROPOUT.domain.values:
+              hparams = {
+                  cf.HP_NUM_UNITS: num_units,
+                  cf.HP_DROPOUT: dropout_rate,
+                  cf.HP_LR: lr,
+                  cf.HP_BATCH_SIZE: batch_size,
+              }
+              run_name = "run-%d" % session_num
+              print('--- Starting trial: %s' % run_name)
+              print({h.name: hparams[h] for h in hparams})
+              train_test_model('logs/hparam_tuning/' + run_name,hparams)
+              session_num += 1
 
 
 # val_loss, val_acc = model.evaluate(x_test, y_test)
