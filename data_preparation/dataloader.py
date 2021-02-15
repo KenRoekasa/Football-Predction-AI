@@ -6,9 +6,12 @@ import random
 import numpy
 import pandas as pd
 
+from tqdm import tqdm
+
 import model.config as config
 
-pd.set_option("display.max_rows", None, "display.max_columns", None)
+
+# pd.set_option("display.max_rows", None, "display.max_columns", None)
 
 
 def get_team_home_games(table, team):
@@ -53,29 +56,62 @@ def format_data(data):
     # Make a subset of the table to include the fields we need
     data_subset = data[
         config.COLUMNS].copy()
+    data_subset.dropna(inplace=True)
+
 
     # remove percentages symbol
-    # percentage_column = ['home total conversion rate',
-    #                      'away total conversion rate', 'home open play conversion rate',
-    #                      'away open play conversion rate', 'home set piece conversion', 'away set piece conversion']
+    percentage_column = ['home total conversion rate',
+                         'away total conversion rate', 'home open play conversion rate',
+                         'away open play conversion rate', 'home set piece conversion', 'away set piece conversion']
 
-    data_subset = data_subset.loc[:, ~data_subset.columns.duplicated()]
+    data_subset = data_subset.loc[:, ~data_subset.columns.duplicated()]  # removes duplicates
 
-    # data_subset['home possession'] = data_subset['home possession'].astype('float64') / 100.0
-    # data_subset['away possession'] = data_subset['away possession'].astype('float64') / 100.0
-    # for column in percentage_column:
-    #     data_subset[column] = data_subset[column].str.rstrip('%').astype('float64') / 100.0
-    data_subset.dropna(inplace=True)
+    data_subset['home possession'] = data_subset['home possession'].astype(int)
+    data_subset['away possession'] = data_subset['away possession'].astype(int)
+    for column in percentage_column:
+        data_subset[column] = data_subset[column].str.rstrip('%').astype(int)  # strip the percentage symbol
+
+
+
+    # Set types of each column
+    # data_subset = data_subset.astype(
+    #     {"home score": int, "away score": int, 'home total shots': int, 'away total shots': int,
+    #      'home shots on target': int, 'away shots on target': int, 'home possession': int, 'away possession': int,
+    #      'home total conversion rate': int,
+    #      'away total conversion rate': int, 'home fouls': int, 'away fouls': int, 'home yellow cards': int,
+    #      'away yellow cards': int,
+    #      'home red cards': int, 'away red cards': int, 'home total passes': int, 'away total passes': int,
+    #      'home accurate passes': int,
+    #      'away accurate passes': int, 'home open play conversion rate': int, 'away open play conversion rate': int,
+    #      'home set piece conversion': int, 'away set piece conversion': int, 'home counter attack shots': int,
+    #      'away counter attack shots': int,
+    #      'home counter attack goals': int, 'away counter attack goals': int, 'home key passes': int,
+    #      'away key passes': int,
+    #      'home dribbles attempted': int, 'away dribbles attempted': int, 'home dribble success': int,
+    #      'away dribble success': int,
+    #      'home aerials won%': int, 'away aerials won%': int, 'home tackles attempted': int,
+    #      'away tackles attempted': int,
+    #      'home tackles success %': int, 'away tackles success %': int, 'home was dribbled': int,
+    #      'away was dribbled': int,
+    #      'home interceptions': int,
+    #      'away interceptions': int, 'home dispossessed': int, 'away dispossessed': int, 'home errors': int,
+    #      'away errors': int,
+    #      'home elo': int,
+    #      'away elo': int})
+
+
     data_subset = data_subset.sort_values(by=['date'])
     data_subset = data_subset.reset_index(drop=True)
     return data_subset
 
 
-def create_training_data(
-        data):  # TODO comment functions
+def create_training_data(data):  # TODO comment functions
+
     n = config.N_PREVIOUS_GAMES  # n is the last previous games to get the average from
     training_data = []
-    for i in range(20, len(data)):
+
+    print(data.iloc[72, 23])
+    for i in tqdm(range(20, len(data))):
         # Select a random team
         # table_of_teams = data['home team'].unique()
         # random_team = data.iloc[random.randrange(0, len(table_of_teams))]['home team']
@@ -125,14 +161,25 @@ def create_training_data(
         teamb_mean_array = numpy.append(teamb_mean_array, away_elo)
 
         mean_array_sum = (teamb_mean_array + teama_mean_array)
-        teama_mean_array_norm = numpy.divide(teama_mean_array, mean_array_sum,where=mean_array_sum!=0)
-        teamb_mean_array_norm = numpy.divide(teamb_mean_array, mean_array_sum,where=mean_array_sum!=0)
+
+        teama_mean_array_norm = numpy.divide(teama_mean_array, mean_array_sum, where=mean_array_sum != 0)
+        teamb_mean_array_norm = numpy.divide(teamb_mean_array, mean_array_sum, where=mean_array_sum != 0)
+
+        with numpy.errstate(divide='ignore', invalid='ignore'):
+            teama_mean_array_norm = numpy.true_divide(teama_mean_array, mean_array_sum)
+            teamb_mean_array_norm = numpy.true_divide(teamb_mean_array, mean_array_sum)
+
+            teama_mean_array_norm[teama_mean_array_norm == numpy.inf] = 0
+            teama_mean_array_norm = numpy.nan_to_num(teama_mean_array_norm)
+
+            teamb_mean_array_norm[teamb_mean_array_norm == numpy.inf] = 0
+            teamb_mean_array_norm = numpy.nan_to_num(teamb_mean_array_norm)
 
         # print(teama_mean_array)
         # print(teamb_mean_array)
         # mean_data_array = teama_mean_array - teamb_mean_array
+
         mean_data_array = config.combination_of_means(teama_mean_array_norm, teamb_mean_array_norm)
-        # print(mean_data_array)
 
         training_data.append([mean_data_array, classification_label])
 
@@ -217,7 +264,7 @@ def merge_seasons(path, csv):
         if i > 0:
             print()
             read_csv = pd.read_csv(r)
-            print(str(r) + str(len(read_csv)))
+            print(str(r) + " " + str(len(read_csv)))
             data = data.append(read_csv)
 
     data['date'] = pd.to_datetime(data["date"])
@@ -225,6 +272,17 @@ def merge_seasons(path, csv):
     data.reset_index(drop=True, inplace=True)
     data.to_csv(csv, index=False)
     os.chdir(owd)
+
+
+def merge_leagues():
+    data = pd.read_csv('../data/whoscored/premierleague/allpremierleague.csv')
+    laliga = pd.read_csv('../data/whoscored/laliga/all-laliga.csv')
+    data = data.append(laliga)
+
+    data['date'] = pd.to_datetime(data["date"])
+    data.sort_values(by=['date'], inplace=True)
+    data.reset_index(drop=True, inplace=True)
+    data.to_csv('../data/whoscored/all-leagues.csv', index=False)
 
 
 def load_premier_league_data():
@@ -241,9 +299,10 @@ def generate_premier_league_data():
 
 # from the csv with all the data create the training data and save it to a binary file using pickle
 def generate_training_data():
-    data = pd.read_csv("../data/whoscored/all.csv")
+    data = pd.read_csv("../data/whoscored/all-leagues.csv")
     data = format_data(data)
     training_data = create_training_data(data)
+
     with open('../data/whoscored/alltrainingdata.pickle', 'wb+') as file:
         pickle.dump(training_data, file)
 
