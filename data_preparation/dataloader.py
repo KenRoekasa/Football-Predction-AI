@@ -55,9 +55,9 @@ def format_data(data):
 
     # Make a subset of the table to include the fields we need
     data_subset = data[
-        config.COLUMNS].copy()
-    data_subset.dropna(inplace=True)
+        config.COLUMNS['pi-rating']].copy()
 
+    data_subset.dropna(inplace=True)
 
     # remove percentages symbol
     percentage_column = ['home total conversion rate',
@@ -124,8 +124,14 @@ def create_training_data(data):  # TODO comment functions
         home_goals = random_game['home score']
         away_goals = random_game['away score']
 
-        home_elo = random_game['home elo']
-        away_elo = random_game['away elo']
+        if config.columns_selector == 'pi-rating':
+
+            # find max to normalise the values
+            home_rating = ((random_game['home home pi rating'] + random_game['home away pi rating']) / 2) + 1000
+            away_rating = ((random_game['away home pi rating'] + random_game['away away pi rating']) / 2) + 1000
+        else:
+            home_rating = random_game['home elo']
+            away_rating = random_game['away elo']
 
         if home_goals > away_goals:
             classification_label = 0  # win
@@ -157,13 +163,10 @@ def create_training_data(data):  # TODO comment functions
 
         teamb_mean_array = teamb_mean.array.to_numpy(copy=True)
 
-        teama_mean_array = numpy.append(teama_mean_array, home_elo)
-        teamb_mean_array = numpy.append(teamb_mean_array, away_elo)
+        teama_mean_array = numpy.append(teama_mean_array, home_rating)
+        teamb_mean_array = numpy.append(teamb_mean_array, away_rating)
 
         mean_array_sum = (teamb_mean_array + teama_mean_array)
-
-        teama_mean_array_norm = numpy.divide(teama_mean_array, mean_array_sum, where=mean_array_sum != 0)
-        teamb_mean_array_norm = numpy.divide(teamb_mean_array, mean_array_sum, where=mean_array_sum != 0)
 
         with numpy.errstate(divide='ignore', invalid='ignore'):
             teama_mean_array_norm = numpy.true_divide(teama_mean_array, mean_array_sum)
