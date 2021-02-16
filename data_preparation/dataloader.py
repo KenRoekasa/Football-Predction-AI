@@ -71,8 +71,6 @@ def format_data(data):
     for column in percentage_column:
         data_subset[column] = data_subset[column].str.rstrip('%').astype(int)  # strip the percentage symbol
 
-
-
     # Set types of each column
     # data_subset = data_subset.astype(
     #     {"home score": int, "away score": int, 'home total shots': int, 'away total shots': int,
@@ -99,7 +97,6 @@ def format_data(data):
     #      'home elo': int,
     #      'away elo': int})
 
-
     data_subset = data_subset.sort_values(by=['date'])
     data_subset = data_subset.reset_index(drop=True)
     return data_subset
@@ -110,8 +107,7 @@ def create_training_data(data):  # TODO comment functions
     n = config.N_PREVIOUS_GAMES  # n is the last previous games to get the average from
     training_data = []
 
-    print(data.iloc[72, 23])
-    for i in tqdm(range(20, len(data))):
+    for i in tqdm(range(40, len(data))):
         # Select a random team
         # table_of_teams = data['home team'].unique()
         # random_team = data.iloc[random.randrange(0, len(table_of_teams))]['home team']
@@ -238,6 +234,11 @@ def get_mean_stats(previous_games, team):
     # Get all home games
     home_games = get_team_home_games(previous_games, team)
     home_games = home_games.filter(regex='home')
+    if config.columns_selector == 'pi-rating':  # remove ratings from the mean calculation
+        home_games.drop('home home pi rating', axis=1, inplace=True)
+        home_games.drop('home away pi rating', axis=1, inplace=True)
+        home_games.drop('away home pi rating', axis=1, inplace=True)
+
     # print(home_games)
     #
     # print(home_games.mean(numeric_only=True))
@@ -246,7 +247,14 @@ def get_mean_stats(previous_games, team):
     # Get away statistics
     away_games = get_team_away_games(previous_games, team)
     away_games = away_games.filter(regex='away')
+
+    if config.columns_selector == 'pi-rating':  # remove ratings from the mean calculation
+        away_games.drop('home away pi rating', axis=1, inplace=True)
+        away_games.drop('away home pi rating', axis=1, inplace=True)
+        away_games.drop('away away pi rating', axis=1, inplace=True)
+
     away_mean = away_games.mean(numeric_only=True)
+
     # print(away_mean)
     # Combine away and home statistics to get the final
     away_mean.index = home_mean.index
@@ -301,12 +309,12 @@ def generate_premier_league_data():
 
 
 # from the csv with all the data create the training data and save it to a binary file using pickle
-def generate_training_data():
-    data = pd.read_csv("../data/whoscored/all-leagues.csv")
+def generate_training_data(csv, pickle_path):
+    data = pd.read_csv(csv)
     data = format_data(data)
     training_data = create_training_data(data)
 
-    with open('../data/whoscored/alltrainingdata.pickle', 'wb+') as file:
+    with open(pickle_path, 'wb+') as file:
         pickle.dump(training_data, file)
 
 
