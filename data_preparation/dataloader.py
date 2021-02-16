@@ -314,8 +314,16 @@ def generate_training_data():
 def load_training_data(path):
     with open(path, "rb") as f:
         training_data = pickle.load(f)
-        return training_data
+
+        x = []  # features set
+        y = []  # label set
+        for features, label in training_data:
+            x.append(features)
+            y.append(label)
+        X = numpy.array(x)
+        y = numpy.array(y)
+        return X, y
 
 
 if __name__ == '__main__':
-    generate_training_data()
+    generate_training_data("../data/whoscored/all-leagues.csv", '../data/whoscored/alltrainingdatapi.pickle')
