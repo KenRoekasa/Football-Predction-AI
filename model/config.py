@@ -3,36 +3,31 @@ import time
 import numpy as np
 from tensorboard.plugins.hparams import api as hp
 
-INPUT_DIM = 54
+INPUT_DIM = 4
 
-METRIC_ACCURACY = 'accuracy'
 
-HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([24, 89, 100]))
-HP_DROPOUT = hp.HParam('dropout', hp.Discrete([0.5, 0.8]))
+HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([5]))
+HP_DROPOUT = hp.HParam('dropout', hp.Discrete([0]))
 HP_OPTIMISER = hp.HParam('optimiser', hp.Discrete(['sgd']))
-HP_LR = hp.HParam('learning_rate', hp.Discrete([0.01, 0.001, 0.0001]))
-HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([12, 32, 100]))
-HP_MOMENTUM = hp.HParam('momentum', hp.Discrete([0]))
+HP_LR = hp.HParam('learning_rate', hp.Discrete([0.009]))
+HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([32]))
+HP_MOMENTUM = hp.HParam('momentum', hp.Discrete([0.01,0.005]))
+HP_REGULARISER_RATE = hp.HParam('regulariser_rate',hp.Discrete([0.01]))
+HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['relu']))
 
 new_data = False
 
-NETWORK_TOPOLOGY = [24]
 
-DROPOUT_VALUE = 0.8
-
-LEARNING_RATE = 0.001
 MOMENTUM = 0
-BATCH_SIZE = 50
-time = time.strftime("%Y-%m-%d-%H-%M-%S", time.gmtime())
-NAME = 'model-%s-lr=%f-momentum=%f-batch-size=%d-dropout=%d-24' % (
-    time, LEARNING_RATE, MOMENTUM, BATCH_SIZE, DROPOUT_VALUE)
 
 N_PREVIOUS_GAMES = 3
 
-columns_selector = 'pi-rating' # Select which subset of fields to choose from below in the data
+columns_selector = 'pi-rating only' # Select which subset of fields to choose from below in the data
 
 
-COLUMNS = {'pi-rating': ['date', 'link', 'home team', 'away team', 'home score', 'away score', 'home total shots',
+COLUMNS = {'elo only':['date', 'link', 'home team', 'away team', 'home score', 'away score','home elo','away elo'],
+'pi-rating only':['date', 'link', 'home team', 'away team', 'home score', 'away score','home home pi rating', 'home away pi rating', 'away home pi rating', 'away away pi rating'],
+    'pi-rating': ['date', 'link', 'home team', 'away team', 'home score', 'away score', 'home total shots',
                          'away total shots',
                          'home shots on target', 'away shots on target', 'home possession', 'away possession',
                          'home total conversion rate',

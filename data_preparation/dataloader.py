@@ -55,21 +55,23 @@ def format_data(data):
 
     # Make a subset of the table to include the fields we need
     data_subset = data[
-        config.COLUMNS['pi-rating']].copy()
+        config.COLUMNS[config.columns_selector]].copy()
 
     data_subset.dropna(inplace=True)
-
-    # remove percentages symbol
-    percentage_column = ['home total conversion rate',
-                         'away total conversion rate', 'home open play conversion rate',
-                         'away open play conversion rate', 'home set piece conversion', 'away set piece conversion']
-
     data_subset = data_subset.loc[:, ~data_subset.columns.duplicated()]  # removes duplicates
 
-    data_subset['home possession'] = data_subset['home possession'].astype(int)
-    data_subset['away possession'] = data_subset['away possession'].astype(int)
-    for column in percentage_column:
-        data_subset[column] = data_subset[column].str.rstrip('%').astype(int)  # strip the percentage symbol
+    if config.columns_selector == 'pi-rating' or config.columns_selector == 'elo':
+        # remove percentages symbol
+        percentage_column = ['home total conversion rate',
+                             'away total conversion rate', 'home open play conversion rate',
+                             'away open play conversion rate', 'home set piece conversion', 'away set piece conversion']
+
+
+
+        data_subset['home possession'] = data_subset['home possession'].astype(int)
+        data_subset['away possession'] = data_subset['away possession'].astype(int)
+        for column in percentage_column:
+            data_subset[column] = data_subset[column].str.rstrip('%').astype(int)  # strip the percentage symbol
 
     # Set types of each column
     # data_subset = data_subset.astype(
@@ -107,7 +109,7 @@ def create_training_data(data):  # TODO comment functions
     n = config.N_PREVIOUS_GAMES  # n is the last previous games to get the average from
     training_data = []
 
-    for i in tqdm(range(40, len(data))):
+    for i in tqdm(range(0, len(data))):
         # Select a random team
         # table_of_teams = data['home team'].unique()
         # random_team = data.iloc[random.randrange(0, len(table_of_teams))]['home team']
@@ -120,11 +122,16 @@ def create_training_data(data):  # TODO comment functions
         home_goals = random_game['home score']
         away_goals = random_game['away score']
 
-        if config.columns_selector == 'pi-rating':
+
+
+        if config.columns_selector == 'pi-rating' or 'pi-rating only':
+
+            min_rating = data[['home home pi rating','home away pi rating','away home pi rating','away away pi rating']].min().min()
+            max_rating =data[['home home pi rating','home away pi rating','away home pi rating','away away pi rating']].max().max()
 
             # find max to normalise the values
-            home_rating = ((random_game['home home pi rating'] + random_game['home away pi rating']) / 2) + 1000
-            away_rating = ((random_game['away home pi rating'] + random_game['away away pi rating']) / 2) + 1000
+            home_rating = (((random_game['home home pi rating'] + random_game['home away pi rating']) / 2) - min_rating) /(max_rating-min_rating)
+            away_rating = (((random_game['away home pi rating'] + random_game['away away pi rating']) / 2) - min_rating) /(max_rating-min_rating)
         else:
             home_rating = random_game['home elo']
             away_rating = random_game['away elo']
@@ -234,10 +241,12 @@ def get_mean_stats(previous_games, team):
     # Get all home games
     home_games = get_team_home_games(previous_games, team)
     home_games = home_games.filter(regex='home')
-    if config.columns_selector == 'pi-rating':  # remove ratings from the mean calculation
+    if config.columns_selector == 'pi-rating' or config.columns_selector == 'pi-rating only':  # remove ratings from the mean calculation
         home_games.drop('home home pi rating', axis=1, inplace=True)
         home_games.drop('home away pi rating', axis=1, inplace=True)
         home_games.drop('away home pi rating', axis=1, inplace=True)
+
+
 
     # print(home_games)
     #
@@ -248,7 +257,7 @@ def get_mean_stats(previous_games, team):
     away_games = get_team_away_games(previous_games, team)
     away_games = away_games.filter(regex='away')
 
-    if config.columns_selector == 'pi-rating':  # remove ratings from the mean calculation
+    if config.columns_selector == 'pi-rating'or config.columns_selector == 'pi-rating only':  # remove ratings from the mean calculation
         away_games.drop('home away pi rating', axis=1, inplace=True)
         away_games.drop('away home pi rating', axis=1, inplace=True)
         away_games.drop('away away pi rating', axis=1, inplace=True)
@@ -261,6 +270,7 @@ def get_mean_stats(previous_games, team):
     combined_table = pd.DataFrame([home_mean, away_mean])
     combined_mean = combined_table.mean(numeric_only=True)
     combined_mean.fillna(0, inplace=True)
+
     return combined_mean
 
 
@@ -334,4 +344,4 @@ def load_training_data(path):
 
 
 if __name__ == '__main__':
-    generate_training_data("../data/whoscored/all-leagues.csv", '../data/whoscored/alltrainingdatapi.pickle')
+    generate_training_data("../data/whoscored/all-leagues.csv", '../data/whoscored/alltrainingdata-pi-rating-only.pickle')
