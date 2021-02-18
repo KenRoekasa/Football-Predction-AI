@@ -163,11 +163,9 @@ def create_training_data(data):  # TODO comment functions
         # print(teama_mean)
         # print(teamb_mean)
         teama_mean_array = teama_mean.array.to_numpy(copy=True)
-
         teamb_mean_array = teamb_mean.array.to_numpy(copy=True)
 
-        teama_mean_array = numpy.append(teama_mean_array, home_rating)
-        teamb_mean_array = numpy.append(teamb_mean_array, away_rating)
+
 
         mean_array_sum = (teamb_mean_array + teama_mean_array)
 
@@ -180,6 +178,9 @@ def create_training_data(data):  # TODO comment functions
 
             teamb_mean_array_norm[teamb_mean_array_norm == numpy.inf] = 0
             teamb_mean_array_norm = numpy.nan_to_num(teamb_mean_array_norm)
+
+        teama_mean_array_norm = numpy.append(teama_mean_array_norm, home_rating)
+        teamb_mean_array_norm = numpy.append(teamb_mean_array_norm, away_rating)
 
         # print(teama_mean_array)
         # print(teamb_mean_array)
