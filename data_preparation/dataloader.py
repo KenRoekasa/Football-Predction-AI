@@ -12,7 +12,48 @@ import model.config as config
 
 
 # pd.set_option("display.max_rows", None, "display.max_columns", None)
+def get_random_game(csvfile):
+    data = pd.read_csv(csvfile)
+    data_subset = format_data(data)
+    random_game = data_subset.iloc[random.randrange(0, len(data) - 20)]
+    teama = random_game['home team']
+    teamb = random_game['away team']
+    n = 3
+    home_goals = random_game['home score']
+    away_goals = random_game['away score']
 
+    if home_goals > away_goals:
+        classification_label = 0  # win
+    elif home_goals == away_goals:
+        classification_label = 1  # lose
+    else:
+        classification_label = 2  # draw
+
+    # print(random_game)
+    # find previous n games for each team
+
+    teama_previous_games = get_previous_n_games(data_subset, teama, n, random_game)
+
+    teamb_previous_games = get_previous_n_games(data_subset, teamb, n, random_game)
+    # print(teamb_previous_games)
+    teama_mean = get_mean_stats(teama_previous_games, teama)
+    teamb_mean = get_mean_stats(teamb_previous_games, teamb)
+    # print(teama_mean)
+    # print(teamb_mean)
+
+    teama_mean_array = teama_mean.array.to_numpy(copy=True)
+    teamb_mean_array = teamb_mean.array.to_numpy(copy=True)
+    # print(teama_mean_array)
+    # print(teamb_mean_array)
+
+    # normalise values
+    teama_mean_array_norm = teama_mean_array / (teamb_mean_array + teama_mean_array)
+    teamb_mean_array_norm = teamb_mean_array / (teamb_mean_array + teama_mean_array)
+
+    mean_data_array = numpy.append(teama_mean_array_norm, teamb_mean_array_norm)
+    # print(mean_data_array)
+
+    return [teama, teamb, home_goals, away_goals, mean_data_array, classification_label]
 
 def get_team_home_games(table, team):
     return table[table["home team"].str.contains(team)].sort_values(by=['date'])
@@ -167,20 +208,22 @@ def create_training_data(data):  # TODO comment functions
 
 
 
-        mean_array_sum = (teamb_mean_array + teama_mean_array)
 
-        with numpy.errstate(divide='ignore', invalid='ignore'):
-            teama_mean_array_norm = numpy.true_divide(teama_mean_array, mean_array_sum)
-            teamb_mean_array_norm = numpy.true_divide(teamb_mean_array, mean_array_sum)
+        # mean_array_sum = (teamb_mean_array + teama_mean_array)
+        #
+        # with numpy.errstate(divide='ignore', invalid='ignore'):
+        #     teama_mean_array_norm = numpy.true_divide(teama_mean_array, mean_array_sum)
+        #     teamb_mean_array_norm = numpy.true_divide(teamb_mean_array, mean_array_sum)
+        #
+        #     teama_mean_array_norm[teama_mean_array_norm == numpy.inf] = 0
+        #     teama_mean_array_norm = numpy.nan_to_num(teama_mean_array_norm)
+        #
+        #     teamb_mean_array_norm[teamb_mean_array_norm == numpy.inf] = 0
+        #     teamb_mean_array_norm = numpy.nan_to_num(teamb_mean_array_norm)
 
-            teama_mean_array_norm[teama_mean_array_norm == numpy.inf] = 0
-            teama_mean_array_norm = numpy.nan_to_num(teama_mean_array_norm)
 
-            teamb_mean_array_norm[teamb_mean_array_norm == numpy.inf] = 0
-            teamb_mean_array_norm = numpy.nan_to_num(teamb_mean_array_norm)
-
-        teama_mean_array_norm = numpy.append(teama_mean_array_norm, home_rating)
-        teamb_mean_array_norm = numpy.append(teamb_mean_array_norm, away_rating)
+        teama_mean_array_norm = numpy.append(teama_mean_array, home_rating)
+        teamb_mean_array_norm = numpy.append(teamb_mean_array, away_rating)
 
         # print(teama_mean_array)
         # print(teamb_mean_array)
@@ -190,51 +233,15 @@ def create_training_data(data):  # TODO comment functions
 
         training_data.append([mean_data_array, classification_label])
 
+
+
+
+
+
     return training_data
 
 
-def get_random_game(csvfile):
-    data = pd.read_csv(csvfile)
-    data_subset = format_data(data)
-    random_game = data_subset.iloc[random.randrange(0, len(data) - 20)]
-    teama = random_game['home team']
-    teamb = random_game['away team']
-    n = 3
-    home_goals = random_game['home score']
-    away_goals = random_game['away score']
 
-    if home_goals > away_goals:
-        classification_label = 0  # win
-    elif home_goals == away_goals:
-        classification_label = 1  # lose
-    else:
-        classification_label = 2  # draw
-
-    # print(random_game)
-    # find previous n games for each team
-
-    teama_previous_games = get_previous_n_games(data_subset, teama, n, random_game)
-
-    teamb_previous_games = get_previous_n_games(data_subset, teamb, n, random_game)
-    # print(teamb_previous_games)
-    teama_mean = get_mean_stats(teama_previous_games, teama)
-    teamb_mean = get_mean_stats(teamb_previous_games, teamb)
-    # print(teama_mean)
-    # print(teamb_mean)
-
-    teama_mean_array = teama_mean.array.to_numpy(copy=True)
-    teamb_mean_array = teamb_mean.array.to_numpy(copy=True)
-    # print(teama_mean_array)
-    # print(teamb_mean_array)
-
-    # normalise values
-    teama_mean_array_norm = teama_mean_array / (teamb_mean_array + teama_mean_array)
-    teamb_mean_array_norm = teamb_mean_array / (teamb_mean_array + teama_mean_array)
-
-    mean_data_array = numpy.append(teama_mean_array_norm, teamb_mean_array_norm)
-    # print(mean_data_array)
-
-    return [teama, teamb, home_goals, away_goals, mean_data_array, classification_label]
 
 
 def get_mean_stats(previous_games, team):
@@ -339,10 +346,23 @@ def load_training_data(path):
         for features, label in training_data:
             x.append(features)
             y.append(label)
+
+
         X = numpy.array(x)
+
+        max = numpy.max(X[:,0])
+        min = numpy.min(X[:,2])
+
+        X[:, 0] = (X[:,0] - min) / (max - min)
+        X[:, 2] = (X[:,2] - min) / (max - min)
+
+
+
+
         y = numpy.array(y)
         return X, y
 
 
 if __name__ == '__main__':
-    generate_training_data("../data/whoscored/all-leagues.csv", '../data/whoscored/alltrainingdata-pi-rating-only.pickle')
+    # generate_training_data("../data/whoscored/all-leagues.csv", '../data/whoscored/alltrainingdata-pi-rating-only-min-max-rest-unormalised.pickle')
+    load_training_data('../data/whoscored/alltrainingdata-pi-rating-only-min-max-rest-unormalised.pickle')
