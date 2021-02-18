@@ -171,6 +171,7 @@ def create_training_data(data):  # TODO comment functions
             max_rating =data[['home home pi rating','home away pi rating','away home pi rating','away away pi rating']].max().max()
 
             # find max to normalise the values
+
             home_rating = (((random_game['home home pi rating'] + random_game['home away pi rating']) / 2) - min_rating) /(max_rating-min_rating)
             away_rating = (((random_game['away home pi rating'] + random_game['away away pi rating']) / 2) - min_rating) /(max_rating-min_rating)
         else:
@@ -209,21 +210,21 @@ def create_training_data(data):  # TODO comment functions
 
 
 
-        # mean_array_sum = (teamb_mean_array + teama_mean_array)
-        #
-        # with numpy.errstate(divide='ignore', invalid='ignore'):
-        #     teama_mean_array_norm = numpy.true_divide(teama_mean_array, mean_array_sum)
-        #     teamb_mean_array_norm = numpy.true_divide(teamb_mean_array, mean_array_sum)
-        #
-        #     teama_mean_array_norm[teama_mean_array_norm == numpy.inf] = 0
-        #     teama_mean_array_norm = numpy.nan_to_num(teama_mean_array_norm)
-        #
-        #     teamb_mean_array_norm[teamb_mean_array_norm == numpy.inf] = 0
-        #     teamb_mean_array_norm = numpy.nan_to_num(teamb_mean_array_norm)
+        mean_array_sum = (teamb_mean_array + teama_mean_array)
+
+        with numpy.errstate(divide='ignore', invalid='ignore'):
+            teama_mean_array_norm = numpy.true_divide(teama_mean_array, mean_array_sum)
+            teamb_mean_array_norm = numpy.true_divide(teamb_mean_array, mean_array_sum)
+
+            teama_mean_array_norm[teama_mean_array_norm == numpy.inf] = 0
+            teama_mean_array_norm = numpy.nan_to_num(teama_mean_array_norm)
+
+            teamb_mean_array_norm[teamb_mean_array_norm == numpy.inf] = 0
+            teamb_mean_array_norm = numpy.nan_to_num(teamb_mean_array_norm)
 
 
-        teama_mean_array_norm = numpy.append(teama_mean_array, home_rating)
-        teamb_mean_array_norm = numpy.append(teamb_mean_array, away_rating)
+        teama_mean_array_norm = numpy.append(teama_mean_array_norm, home_rating)
+        teamb_mean_array_norm = numpy.append(teamb_mean_array_norm, away_rating)
 
         # print(teama_mean_array)
         # print(teamb_mean_array)
@@ -364,5 +365,5 @@ def load_training_data(path):
 
 
 if __name__ == '__main__':
-    # generate_training_data("../data/whoscored/all-leagues.csv", '../data/whoscored/alltrainingdata-pi-rating-only-min-max-rest-unormalised.pickle')
-    load_training_data('../data/whoscored/alltrainingdata-pi-rating-only-min-max-rest-unormalised.pickle')
+    generate_training_data("../data/whoscored/all-leagues.csv", '../data/whoscored/alltrainingdata-pi-rating-only-all-ratio-norm.pickle')
+
