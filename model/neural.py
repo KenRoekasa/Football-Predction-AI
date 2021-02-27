@@ -1,18 +1,20 @@
 import datetime
 import os
 
-
+import numpy
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-from data_preparation.dataloader import load_training_data
+import numpy as np
+from data_preparation.dataloader import load_training_data, get_random_game
 from tqdm import tqdm
 import tensorflow as tf
 import model.config as cf
 from tensorboard.plugins.hparams import api as hp
 from tensorflow.python.keras import regularizers
 from tensorflow.python.keras.callbacks import ReduceLROnPlateau
-EPOCHS = 300
+
+EPOCHS = 250
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
 
@@ -25,7 +27,12 @@ except RuntimeError as e:
 # tf.get_logger().setLevel('ERROR')
 # tf.autograph.set_verbosity(1)
 
-x_train, y_train = load_training_data('../data/whoscored/alltrainingdata-pi-rating-only-all-ratio-norm.pickle')
+x_train, y_train, x_test, y_test = load_training_data(
+    '../data/whoscored/trainingdata/alltrainingdata-6-pi-rating only.pickle')
+
+print(y_train.tolist().count(0))
+print(y_train.tolist().count(1))
+print(y_train.tolist().count(2))
 
 
 # x_test, y_test = prepare_data()
@@ -35,7 +42,7 @@ def train_test_model(logdir, hparams):
     if hparams[cf.HP_OPTIMISER] == "adam":
         optimiser = tf.keras.optimizers.Adam(learning_rate=hparams[cf.HP_LR])
     elif hparams[cf.HP_OPTIMISER] == "sgd":
-        optimiser = tf.keras.optimizers.SGD(lr=hparams[cf.HP_LR],momentum=hparams[cf.HP_MOMENTUM])
+        optimiser = tf.keras.optimizers.SGD(lr=hparams[cf.HP_LR], momentum=hparams[cf.HP_MOMENTUM])
     elif hparams[cf.HP_OPTIMISER] == "RMSprop":
         optimiser = tf.keras.optimizers.RMSprop(lr=hparams[cf.HP_LR])
     elif hparams[cf.HP_OPTIMISER] == "Adagrad":
@@ -51,6 +58,13 @@ def train_test_model(logdir, hparams):
     model.add(tf.keras.layers.Dense(hparams[cf.HP_NUM_UNITS], activation=hparams[cf.HP_ACTIVATION]))
     model.add(tf.keras.layers.Dense(hparams[cf.HP_NUM_UNITS], activation=hparams[cf.HP_ACTIVATION]))
 
+    # # model.add(tf.keras.layers.Dropout(hparams[cf.HP_DROPOUT]))
+    # model.add(tf.keras.layers.Dense(hparams[cf.HP_NUM_UNITS], activation=hparams[cf.HP_ACTIVATION]))
+    # # model.add(tf.keras.layers.Dropout(hparams[cf.HP_DROPOUT]))
+    # model.add(tf.keras.layers.Dense(hparams[cf.HP_NUM_UNITS], activation=hparams[cf.HP_ACTIVATION]))
+
+    # model.add(tf.keras.layers.Dropout(hparams[cf.HP_DROPOUT]))
+
     #                                 kernel_regularizer=regularizers.l1(hparams[cf.HP_REGULARISER_RATE])))
     # model.add(tf.keras.layers.Dense(hparams[cf.HP_NUM_UNITS], activation=tf.nn.sigmoid,
     #                                 kernel_regularizer=regularizers.l1(hparams[cf.HP_REGULARISER_RATE])))
@@ -64,10 +78,9 @@ def train_test_model(logdir, hparams):
     #                                 kernel_regularizer=regularizers.l1(hparams[cf.HP_REGULARISER_RATE])))
     # model.add(tf.keras.layers.Dropout(hparams[cf.HP_DROPOUT]))
 
-
     model.add(tf.keras.layers.Dense(3, activation=tf.nn.softmax))
 
-    model.compile(optimizer=optimiser, loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+    model.compile(optimizer=optimiser, loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
                   metrics=['accuracy'])
 
     callbacks = [
@@ -78,12 +91,12 @@ def train_test_model(logdir, hparams):
         # early stopping
     ]
 
-    # model.save('saved_models/')
     model.fit(x_train, y_train, epochs=EPOCHS, batch_size=hparams[cf.HP_BATCH_SIZE], shuffle=True, verbose=1,
-              callbacks=callbacks, validation_split=0.05)
+              callbacks=callbacks, validation_split=0.15)
     _, accuracy = model.evaluate(x_train, y_train)
+    model.save('saved_models/model1')
 
-    return accuracy
+    return model
 
 
 if __name__ == '__main__':
@@ -98,32 +111,46 @@ if __name__ == '__main__':
                 for activation in cf.HP_ACTIVATION.domain.values:
                     for num_units in cf.HP_NUM_UNITS.domain.values:
                         for momentum in cf.HP_MOMENTUM.domain.values:
+                            for rr in cf.HP_REGULARISER_RATE.domain.values:
+                                for dropout in cf.HP_DROPOUT.domain.values:
+                                    it_start_time = datetime.datetime.now()
+                                    hparams = {
+                                        cf.HP_NUM_UNITS: num_units,
+                                        cf.HP_LR: lr,
+                                        cf.HP_BATCH_SIZE: batch_size,
+                                        cf.HP_OPTIMISER: optimiser,
+                                        cf.HP_ACTIVATION: activation,
+                                        cf.HP_MOMENTUM: momentum,
+                                        cf.HP_REGULARISER_RATE: rr,
+                                        cf.HP_DROPOUT: dropout
+                                    }
+                                    run_name = "run-%d" % session_num
+                                    print('--- Starting trial: %s' % run_name)
+                                    print({h.name: hparams[h] for h in hparams})
+                                    today = datetime.date.today()
 
-                            it_start_time = datetime.datetime.now()
+                                    model = train_test_model(
+                                        'logs/hparam_tuning/default/pi-rating-only/3-hidden/' + str(
+                                            today) + '/' + 'epoch' + str(
+                                            EPOCHS) + str(
+                                            datetime.datetime.now().strftime("%Y%m%d-%H%M%S")), hparams)
 
-                            hparams = {
-                                cf.HP_NUM_UNITS: num_units,
-                                cf.HP_LR: lr,
-                                cf.HP_BATCH_SIZE: batch_size,
-                                cf.HP_OPTIMISER: optimiser,
-                                cf.HP_ACTIVATION: activation,
-                                cf.HP_MOMENTUM: momentum
-                            }
-                            run_name = "run-%d" % session_num
-                            print('--- Starting trial: %s' % run_name)
-                            print({h.name: hparams[h] for h in hparams})
-                            train_test_model(
-                                'logs/hparam_tuning/min-max-all/pi-rating-only/3-hidden/' + 'epoch' + str(
-                                    EPOCHS) + str(
-                                    datetime.datetime.now().strftime("%Y%m%d-%H%M%S")), hparams)
+                                    for i in range(0,len(x_test)): # test accuracy on test data
+                                        input = x_test[i]
+                                        output = y_test[i]
+                                        print(input)
 
-                            it_end_time = datetime.datetime.now()
+                                        predictions = model.predict(np.array([input]))
 
-                            time_elapsed = (it_end_time - it_start_time)
+                                        print(np.argmax(predictions))
 
-                            print(str(time_elapsed) + ' elapsed')
+                                    it_end_time = datetime.datetime.now()
 
-                            session_num += 1
+                                    time_elapsed = (it_end_time - it_start_time)
+
+                                    print(str(time_elapsed) + ' elapsed')
+
+                                    session_num += 1
 
     end_time = datetime.datetime.now()
 
@@ -134,9 +161,3 @@ if __name__ == '__main__':
 # val_loss, val_acc = model.evaluate(x_test, y_test)
 # print(val_loss, val_acc)
 #
-# random_game = get_random_game("../data/whoscored/premierleague-20182019.csv")
-# print(random_game)
-# test_game = np.array(random_game[4])
-# print(test_game)
-# predictions = model.predict(np.array([test_game]))
-# print(predictions)
