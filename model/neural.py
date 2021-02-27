@@ -3,7 +3,7 @@ import os
 
 import numpy
 from sklearn.model_selection import train_test_split
-
+import matplotlib.pyplot as plt
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 import numpy as np
@@ -12,6 +12,7 @@ from tqdm import tqdm
 import tensorflow as tf
 import model.config as cf
 from tensorboard.plugins.hparams import api as hp
+import matplotlib.pyplot as plt
 from tensorflow.python.keras import regularizers
 from tensorflow.python.keras.callbacks import ReduceLROnPlateau
 
@@ -31,7 +32,7 @@ except RuntimeError as e:
 x_train, y_train = load_training_data(
     '../data/whoscored/trainingdata/alltrainingdata-6-pi-rating only.pickle')
 
-x_train, x_valid, y_train, y_valid = train_test_split(x_train, y_train, test_size=0.30, shuffle= True)
+x_train, x_valid, y_train, y_valid = train_test_split(x_train, y_train, test_size=0.30, shuffle=True)
 
 print(y_train.tolist().count(0))
 print(y_train.tolist().count(1))
@@ -95,7 +96,7 @@ def train_test_model(logdir, hparams):
     ]
 
     model.fit(x_train, y_train, epochs=EPOCHS, batch_size=hparams[cf.HP_BATCH_SIZE], shuffle=True, verbose=1,
-              callbacks=callbacks, validation_data=(x_valid,y_valid))
+              callbacks=callbacks, validation_data=(x_valid, y_valid))
 
     _, accuracy = model.evaluate(x_train, y_train)
     model.save('saved_models/model' + str(datetime.datetime.now().strftime("%Y%m%d-%H%M%S")))
@@ -147,9 +148,15 @@ if __name__ == '__main__':
                                     #
                                     #
                                     #     print(np.argmax(predictions))
+
                                     predictions = model.predict(x_valid)
+                                    results = []
                                     for i in predictions:
-                                        print(i)
+                                        results.append(np.argmax(i))
+
+                                    plt.bar(['0', '1', '2'], [results.count(0), results.count(1), results.count(2)])
+                                    plt.show()
+
                                     it_end_time = datetime.datetime.now()
 
                                     time_elapsed = (it_end_time - it_start_time)
