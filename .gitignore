@@ -2,3 +2,5 @@ footballproject/
 data/
 __pycache__/
 model/logs/
+data.rar
+model/saved_models/
