@@ -5,6 +5,7 @@ import random
 
 import numpy
 import pandas as pd
+from sklearn.utils import resample
 
 from tqdm import tqdm
 
@@ -469,8 +470,6 @@ def load_training_data(path):
     with open(path, "rb") as f:
         training_data = pickle.load(f)
 
-
-
         df = pd.DataFrame(training_data)
 
         draws = df[df[1] == 1].copy()
@@ -481,10 +480,24 @@ def load_training_data(path):
         # print(len(wins))
         # print(len(loss))
 
-        wins = wins[:-2326].copy()
+        # wins = wins[:-2326].copy()
 
-        frames = [wins, draws, loss]
+        # wins_downsampled = resample(wins,
+        #                             replace=False,  # sample without replacement
+        #                             n_samples=len(draws),  # to match minority class
+        #                             random_state=123)
+        # loss_downsampled = resample(loss,
+        #                             replace=False,  # sample without replacement
+        #                             n_samples=len(draws),  # to match minority class
+        #                             random_state=123)
+
+        draws_upsampled = resample(draws, replace=True, n_samples=len(wins), random_state=123)
+
+        loss_upsampled = resample(loss, replace=True, n_samples=len(wins), random_state=123)
+
+        frames = [wins, draws_upsampled, loss_upsampled]
         result = pd.concat(frames)
+
         training_data = result.values.tolist()
 
         random.shuffle(training_data)
@@ -500,19 +513,8 @@ def load_training_data(path):
 
         for features, label in training_data:
             # balance data
-            if label == 0:
-                    x.append(features)
-                    y.append(label)
-                    counter_0 += 1
-            elif label == 1:
-                    x.append(features)
-                    y.append(label)
-                    counter_1 += 1
-            elif label == 2:
-                    x.append(features)
-                    y.append(label)
-                    counter_2 += 1
-
+            x.append(features)
+            y.append(label)
 
         X = numpy.array(x)
         if config.normalise == 1:  # normalise further
