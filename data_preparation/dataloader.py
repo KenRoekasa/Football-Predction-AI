@@ -469,6 +469,24 @@ def load_training_data(path):
     with open(path, "rb") as f:
         training_data = pickle.load(f)
 
+
+
+        df = pd.DataFrame(training_data)
+
+        draws = df[df[1] == 1].copy()
+        wins = df[df[1] == 0].copy()
+        loss = df[df[1] == 2].copy()
+
+        # print(len(draws))
+        # print(len(wins))
+        # print(len(loss))
+
+        wins = wins[:-2326].copy()
+
+        frames = [wins, draws, loss]
+        result = pd.concat(frames)
+        training_data = result.values.tolist()
+
         random.shuffle(training_data)
 
         # split into train and test
@@ -481,43 +499,27 @@ def load_training_data(path):
         counter_2 = 0
 
         for features, label in training_data:
-
             # balance data
             if label == 0:
-                if counter_0 < 1000:
                     x.append(features)
                     y.append(label)
                     counter_0 += 1
             elif label == 1:
-                if counter_1 < 1000:
                     x.append(features)
                     y.append(label)
                     counter_1 += 1
             elif label == 2:
-                if counter_2 < 1000:
                     x.append(features)
                     y.append(label)
                     counter_2 += 1
 
 
-
-        test_range = int(0.15 * len(x))
-        index = len(x) - test_range
-
-        x_test = x[index:]
-        y_test = y[index:]
-
-        x = x[:index - 1]
-        y = y[:index - 1]
-
         X = numpy.array(x)
-        X_test = numpy.array(x_test)
         if config.normalise == 1:  # normalise further
             X = (X - numpy.min(X)) / (numpy.max(X) - numpy.min(X))
 
         y = numpy.array(y)
-        y_test = numpy.array(y_test)
-        return X, y, X_test, y_test
+        return X, y
 
 
 if __name__ == '__main__':
