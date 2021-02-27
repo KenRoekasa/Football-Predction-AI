@@ -7,38 +7,26 @@ import pandas as pd
 
 from pi_rating import pi_rating
 
-if len(sys.argv) == 3:
+
+def pi_rating_gen(league_csv,pi_json):
     pi_ratings = {}
-
-    league_csv = sys.argv[1]
-
-    pi_json = sys.argv[2]
-
     try:
         with open(pi_json) as json_file:
             pi_ratings = json.load(json_file)
     except:
         pass
-
     matches = pd.read_csv(league_csv)
-
-
     for i, match in matches.iterrows():
         # if the team name isn't in the pi-rating dictionary add it in with an initial value
         if match.loc['home team'] not in pi_ratings:
             pi_ratings[match['home team']] = {}
             pi_ratings[match['home team']]['home'] = 0
             pi_ratings[match['home team']]['away'] = 0
-
-
-
-    matches['date'] = pd.to_datetime(matches["date"])
+    matches['date'] = pd.to_datetime(matches["date"], dayfirst=True)
     sorted_matches = matches.sort_values(by=['date']).copy()
-
     print(pi_ratings)
-
     for i, row in sorted_matches.iterrows():
-    # apart from the header
+        # apart from the header
 
         teama = row['home team']
         teamb = row['away team']
@@ -59,13 +47,15 @@ if len(sys.argv) == 3:
         sorted_matches._set_value(i, 'home away pi rating', Raa)
         sorted_matches._set_value(i, 'away home pi rating', Rbh)
         sorted_matches._set_value(i, 'away away pi rating', Rba)
-
     # write back into the csv
     sorted_matches.to_csv(league_csv, index=False)
-
     with open(pi_json, 'w') as fp:
         json.dump(pi_ratings, fp)
 
-else:
-    print("Invalid arguments pi_rating_gen.py [csvfile] [elorating csv file name]")
+if __name__ == '__main__':
+    if len(sys.argv) == 3:
+        pi_rating_gen(sys.argv[1],sys.argv[2])
+
+    else:
+        print("Invalid arguments pi_rating_gen.py [csvfile] [elorating csv file name]")
 
