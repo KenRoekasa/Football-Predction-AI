@@ -5,7 +5,7 @@ from tensorboard.plugins.hparams import api as hp
 
 INPUT_DIM = 4
 
-HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([5,4,10,20]))
+HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([5]))
 HP_DROPOUT = hp.HParam('dropout', hp.Discrete([0.9]))
 HP_OPTIMISER = hp.HParam('optimiser', hp.Discrete(['sgd']))
 HP_LR = hp.HParam('learning_rate', hp.Discrete([0.001,0.005,0.01]))
@@ -14,12 +14,10 @@ HP_MOMENTUM = hp.HParam('momentum', hp.Discrete([0.005,0.05]))
 HP_REGULARISER_RATE = hp.HParam('regulariser_rate', hp.Discrete([0.0006]))
 HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['relu']))
 
-new_data = False
 
-
-
-N_PREVIOUS_GAMES = 6
-
+N_PREVIOUS_GAMES = 5
+normalise = 'min-max'
+combination = 'diff'
 columns_selector = 'pi-rating only'  # Select which subset of fields to choose from below in the data
 
 default_columns = ['date', 'link', 'home team', 'away team', 'home score', 'away score', 'league', 'season']
@@ -97,7 +95,7 @@ COLUMNS = {'elo only': default_columns + ['home elo', 'away elo'],
                                             'away total conversion rate',
                                             'home home pi rating', 'home away pi rating', 'away home pi rating',
                                             'away away pi rating'], }
-normalise = 0
+
 
 
 def combination_of_means(teama_mean_array,
