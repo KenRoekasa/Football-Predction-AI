@@ -15,18 +15,12 @@ HP_REGULARISER_RATE = hp.HParam('regulariser_rate', hp.Discrete([0.0006]))
 HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['relu']))
 
 
-N_PREVIOUS_GAMES = 5
-normalise = 'min-max'
-combination = 'diff'
-columns_selector = 'pi-rating only'  # Select which subset of fields to choose from below in the data
-
 default_columns = ['date', 'link', 'home team', 'away team', 'home score', 'away score', 'league', 'season']
 
 COLUMNS = {'elo only': default_columns + ['home elo', 'away elo'],
 
            'pi-rating only': default_columns +
-                             ['home home pi rating', 'home away pi rating', 'away home pi rating',
-                              'away away pi rating'],
+                             ['home pi rating', 'away pi rating'],
 
            'pi-rating': default_columns + ['home total shots',
                                            'away total shots',
