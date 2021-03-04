@@ -138,7 +138,6 @@ if len(sys.argv) == 3:
 
 
     # accept cookies
-
     cookie_button = driver.find_element_by_xpath("//div[@class='qc-cmp2-summary-buttons']/button[2]")
     cookie_button.click()
 

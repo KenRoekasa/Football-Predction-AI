@@ -8,9 +8,9 @@ INPUT_DIM = 4
 HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([5]))
 HP_DROPOUT = hp.HParam('dropout', hp.Discrete([0.9]))
 HP_OPTIMISER = hp.HParam('optimiser', hp.Discrete(['sgd']))
-HP_LR = hp.HParam('learning_rate', hp.Discrete([0.001,0.005,0.01]))
-HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([32,16]))
-HP_MOMENTUM = hp.HParam('momentum', hp.Discrete([0.005,0.05]))
+HP_LR = hp.HParam('learning_rate', hp.Discrete([0.005]))
+HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([16]))
+HP_MOMENTUM = hp.HParam('momentum', hp.Discrete([0.05]))
 HP_REGULARISER_RATE = hp.HParam('regulariser_rate', hp.Discrete([0.0006]))
 HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['relu']))
 

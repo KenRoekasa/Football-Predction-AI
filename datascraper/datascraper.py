@@ -1,28 +1,20 @@
 import csv
 
-from selenium.webdriver import ActionChains
-from selenium.webdriver.support import expected_conditions as EC
-
-from actions import Actions
 from selenium import webdriver
-import urllib.request, json
 
 from bs4 import BeautifulSoup
 
-from jsonreader import json_parser
+from datascraper import json_parser
 import time
 
-from selenium.common.exceptions import NoSuchElementException, ElementNotVisibleException
-from selenium.webdriver.common.by import By
-from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.support.wait import WebDriverWait
+from selenium.common.exceptions import ElementNotVisibleException
+
+
 
 chromepath = "chromedriver.exe"
 # driver = webdriver.Chrome(chromepath)
 driver = webdriver.Firefox()
 driver.maximize_window()
-
-
 
 
 def getMatches(matches_arr, page_source):
@@ -46,6 +38,7 @@ def getMatches(matches_arr, page_source):
                     matches_arr.append(data)
     return matches_arr
 
+
 # accept cookies once
 driver.get("https://www.sofascore.com")
 time.sleep(1)
@@ -53,7 +46,8 @@ cookie_button = driver.find_element_by_xpath("//*[@id='onetrust-accept-btn-handl
 
 cookie_button.click()
 
-leagues = ["england/premier-league/17", "spain/laliga/8","germany/bundesliga/35","italy/serie-a/23","france/ligue-1/34"]  # TODO change this too
+leagues = ["england/premier-league/17", "spain/laliga/8", "germany/bundesliga/35", "italy/serie-a/23",
+           "france/ligue-1/34"]  # TODO change this too
 
 for league in leagues:
     print(league)
@@ -63,16 +57,12 @@ for league in leagues:
     # driver.get("https://www.sofascore.com/tournament/football/england/premier-league/17")
     # driver.get("https://www.sofascore.com/tournament/football/spain/laliga/8")
 
-
-
-
     for i in range(2, 7):
 
         season_select = driver.find_element_by_xpath("//button[@class='styles__Selector-cdd802-4 iDNquT']")
 
         season_select.click()
         # time.sleep(2)
-
 
         dropdown_season_select = driver.find_element_by_xpath(
             "//div[@class='styles__MenuWrapper-cdd802-1 iDYonh']//li[%d]" % i)
