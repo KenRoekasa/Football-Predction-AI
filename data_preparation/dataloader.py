@@ -232,7 +232,6 @@ def get_winstreak(previous_games, team):
     return counter
 
 
-
 def create_training_data(data, settings):  # TODO comment functions
     n = settings['n']
     # Split into leagues and seasons
@@ -243,15 +242,6 @@ def create_training_data(data, settings):  # TODO comment functions
     for league in tqdm(leagues):
 
         data_league = data[data['league'] == league]
-        if 'pi-rating' in settings['columns']:
-            # Get the minimum value for that league
-            min_rating = data_league[['home pi rating', 'away pi rating']].min().min()
-            # Get the maximum value for that league
-            max_rating = data_league[['home pi rating', 'away pi rating']].max().max()
-
-        elif 'elo' in settings['columns']:  # same for elo
-            min_rating = data_league[['home elo', 'away elo']].min().min()
-            max_rating = data_league[['home elo', 'away elo']].max().max()
 
         seasons = data_league['season'].unique()
 
@@ -275,16 +265,16 @@ def create_training_data(data, settings):  # TODO comment functions
                 else:
                     classification_label = 2  # lose
 
-                away_rating, home_rating = normalise_ratings(min_rating, max_rating, random_game, settings)
+                away_rating, home_rating = normalise_ratings(data_league, random_game, settings)
 
                 # find previous n games for each team
 
-                teama_mean_array = get_mean_array(data_season, n, random_game, teama, settings)
-                teamb_mean_array = get_mean_array(data_season, n, random_game, teamb, settings)
+                teama_mean_array = get_mean_array(data_season, n, random_game, teama)
+                teamb_mean_array = get_mean_array(data_season, n, random_game, teamb)
 
+                # append the ratings
                 teama_mean_array = numpy.append(teama_mean_array, home_rating)
                 teamb_mean_array = numpy.append(teamb_mean_array, away_rating)
-
 
                 if settings['combination'] == 'append':
                     mean_data_array = numpy.append(teama_mean_array, teamb_mean_array)
@@ -293,25 +283,56 @@ def create_training_data(data, settings):  # TODO comment functions
 
                 training_data.append([mean_data_array, classification_label])
 
-
     return training_data
 
 
+def normalise_ratings(data_league, random_game, settings):
+    if settings['rating normalisation'] == 'min-max':
 
-def normalise_ratings(min_rating, max_rating, random_game, settings):
-    if settings['rating normalisation'] == 'min-max':  # TODO change if statement
         if 'pi-rating' in settings['columns']:  # min max rating for ratings
-            home_rating = (random_game['home pi rating'] - min_rating) / (max_rating - min_rating)
-            away_rating = (random_game['away pi rating'] - min_rating) / (max_rating - min_rating)
+            # Get the minimum value for that league
+            min_rating = data_league[['home pi rating', 'away pi rating']].min().min()
+            # Get the maximum value for that league
+            max_rating = data_league[['home pi rating', 'away pi rating']].max().max()
+
+            away_rating, home_rating = min_max_normalisation(random_game['away pi rating'],
+                                                             random_game['home pi rating'], max_rating, min_rating)
 
 
         elif 'elo' in settings['columns']:  # same for elo
-            # find max to normalise the values
-            home_rating = random_game['home elo']
-            away_rating = random_game['away elo']
-            home_rating = (home_rating - min_rating) / (max_rating - min_rating)
-            away_rating = (away_rating - min_rating) / (max_rating - min_rating)
 
+            min_rating = data_league[['home elo', 'away elo']].min().min()
+            max_rating = data_league[['home elo', 'away elo']].max().max()
+
+            # find max to normalise the values
+
+            away_rating, home_rating = min_max_normalisation(random_game['away elo'], random_game['home elo'],
+                                                             max_rating, min_rating)
+
+
+
+        elif 'both' in settings['columns']:  # setup both
+            # Get the minimum value for that league
+
+            pi_rating_min_rating = data_league[['home pi rating', 'away pi rating']].min().min()
+            # Get the maximum value for that league
+            pi_rating_max_rating = data_league[['home pi rating', 'away pi rating']].max().max()
+
+            pi_rating_away_rating, pi_rating_home_rating = min_max_normalisation(random_game['away pi rating'],
+                                                                                 random_game['home pi rating'],
+                                                                                 pi_rating_max_rating,
+                                                                                 pi_rating_min_rating)
+
+            elo_min_rating = data_league[['home elo', 'away elo']].min().min()
+            elo_max_rating = data_league[['home elo', 'away elo']].max().max()
+
+            # find max to normalise the values
+
+            elo_away_rating, elo_home_rating = min_max_normalisation(random_game['away elo'], random_game['home elo'],
+                                                                     elo_max_rating, elo_min_rating)
+
+            away_rating, home_rating = [elo_away_rating, pi_rating_away_rating], [elo_home_rating,
+                                                                                  pi_rating_home_rating]
 
     if settings['rating normalisation'] == 'ratio':
 
@@ -321,10 +342,7 @@ def normalise_ratings(min_rating, max_rating, random_game, settings):
 
             away_rating = random_game['away pi rating']
 
-            sum_rating = home_rating + away_rating
-
-            home_rating = home_rating / sum_rating
-            away_rating = away_rating / sum_rating
+            away_rating, home_rating = ratio_normalisation(away_rating, home_rating)
 
         elif 'elo' in settings['columns']:  # same for elo
 
@@ -332,11 +350,17 @@ def normalise_ratings(min_rating, max_rating, random_game, settings):
             home_rating = random_game['home elo']
             away_rating = random_game['away elo']
 
-            sum_rating = home_rating + away_rating
+            away_rating, home_rating = ratio_normalisation(away_rating, home_rating)
 
-            home_rating = home_rating / sum_rating
-            away_rating = away_rating / sum_rating
+        elif 'both' in settings['columns']:
+            elo_home_rating = random_game['home elo']
+            elo_away_rating = random_game['away elo']
+            elo_away_rating, elo_home_rating = ratio_normalisation(elo_away_rating, elo_home_rating)
+            pi_rating_away_rating = random_game['away pi rating']
+            pi_rating_home_rating = random_game['home pi rating']
 
+            away_rating, home_rating = [elo_away_rating, pi_rating_away_rating], [elo_home_rating,
+                                                                                  pi_rating_home_rating]
 
     if settings['rating normalisation'] == 'none':
 
@@ -355,7 +379,23 @@ def normalise_ratings(min_rating, max_rating, random_game, settings):
     return away_rating, home_rating
 
 
-def normalise_mean_array(teama_mean_array, teamb_mean_array,norm):
+def min_max_normalisation(away_rating, home_rating, max_rating, min_rating):
+    home_rating = (home_rating - min_rating) / (max_rating - min_rating)
+    away_rating = (away_rating - min_rating) / (max_rating - min_rating)
+    return away_rating, home_rating
+
+
+def ratio_normalisation(away_rating, home_rating):
+    # find max to normalise the values
+
+    sum_rating = home_rating + away_rating
+    home_rating = home_rating / sum_rating
+    away_rating = away_rating / sum_rating
+
+    return away_rating, home_rating
+
+
+def normalise_mean_array(teama_mean_array, teamb_mean_array, norm):
     if norm == 'ratio':
         mean_array_sum = teamb_mean_array + teama_mean_array
         with numpy.errstate(divide='ignore', invalid='ignore'):
@@ -373,24 +413,29 @@ def normalise_mean_array(teama_mean_array, teamb_mean_array,norm):
     return teama_mean_array_norm, teamb_mean_array_norm
 
 
-def get_mean_array(data_season, n, random_game, teama, settings):
+def get_mean_array(data_season, n, random_game, teama):
     teama_previous_games = get_previous_n_games(data_season, teama, n, random_game)
     teama_winstreak = get_winstreak(teama_previous_games, teama)
-    teama_mean = get_mean_stats(teama_previous_games, teama, settings)
+    teama_mean = get_mean_stats(teama_previous_games, teama)
     teama_mean_array = teama_mean.array.to_numpy(copy=True)
     teama_mean_array = numpy.append(teama_mean_array, teama_winstreak)
     return teama_mean_array
 
 
-def get_mean_stats(previous_games, team, settings):
+def get_mean_stats(previous_games, team):
     # Get home statistics
     # Get all home games
     home_games = get_team_home_games(previous_games, team)
     home_games = home_games.filter(regex='home')
-    if 'pi-rating' in settings['columns']:  # remove ratings from the mean calculation
+
+    try:
         home_games.drop('home pi rating', axis=1, inplace=True)
-    elif settings['columns'] == 'elo' or settings['columns'] == 'elo only':
+    except KeyError:
+        pass
+    try:
         home_games.drop('home elo', axis=1, inplace=True)
+    except KeyError:
+        pass
 
     # print(home_games)
     #
@@ -401,10 +446,15 @@ def get_mean_stats(previous_games, team, settings):
     away_games = get_team_away_games(previous_games, team)
     away_games = away_games.filter(regex='away')
 
-    if 'pi-rating' in settings['columns']:  # remove ratings from the mean calculation
+    try:
         away_games.drop('away pi rating', axis=1, inplace=True)
-    elif 'elo' in settings['columns']:
+    except KeyError:
+        pass
+    try:
         away_games.drop('away elo', axis=1, inplace=True)
+    except KeyError:
+        pass
+
 
     away_mean = away_games.mean(numeric_only=True)
 
@@ -512,18 +562,14 @@ def load_training_data(path):
             x.append(features)
             y.append(label)
 
-
-
         X = numpy.array(x)
-
-
 
         y = numpy.array(y)
         return X, y
 
 
 if __name__ == '__main__':
-    for column in ['pi-rating only', 'elo only']:
+    for column in ['both']:
         for combination in ['append', 'diff']:
             for n in range(1, 7):
                 settings = {'n': n, 'columns': column, 'rating normalisation': 'min-max',
@@ -533,7 +579,6 @@ if __name__ == '__main__':
                                        '../data/whoscored/trainingdata/unnormalised/alltrainingdata-%d-%s-%s-%s.pickle' % (
                                            settings['n'], settings['columns'], settings['rating normalisation'],
                                            settings['combination']), settings)
-
 
     # merge_seasons('../data/whoscored/seriea/datascraped','../all-seriea.csv')
     # merge_leagues()
