@@ -334,7 +334,7 @@ def normalise_ratings(data_league, random_game, settings):
 
             # find max to normalise the values
             home_rating, away_rating = get_ratings(data_league, random_game, 'elo')
-            elo_away_rating, elo_home_rating = min_max_normalisation(away_rating,  home_rating,
+            elo_away_rating, elo_home_rating = min_max_normalisation(away_rating, home_rating,
                                                                      elo_max_rating, elo_min_rating)
 
             away_rating, home_rating = [elo_away_rating, pi_rating_away_rating], [elo_home_rating,
@@ -385,78 +385,108 @@ def get_ratings(data_league, random_game, rating):
     if rating == 'pi rating':
         # get the previous game
         home_previous = get_previous_n_games(data_league, random_game['home team'], 1, random_game)
-        # if rating team is home team get home rating
-        if home_previous.iloc[0]['home team'] == random_game['home team']:
-            home_rating = home_previous['home pi rating']
-        # if rating team is away team get away rating
-        elif home_previous.iloc[0]['away team'] == random_game['home team']:
-            home_rating = home_previous['away pi rating']
+
+        if home_previous.empty:  # if no previous rating available rating is 0
+            home_rating = 0
+        else:
+            # if rating team is home team get home rating
+            if home_previous.iloc[0]['home team'] == random_game['home team']:
+                home_rating = home_previous['home pi rating']
+            # if rating team is away team get away rating
+            elif home_previous.iloc[0]['away team'] == random_game['home team']:
+                home_rating = home_previous['away pi rating']
 
         # get the previous game
         home_previous = get_previous_n_games(data_league, random_game['away team'], 1, random_game)
-        # if rating team is home team get home rating
-        if home_previous.iloc[0]['home team'] == random_game['away team']:
-            away_rating = home_previous['home pi rating']
-        # if rating team is away team get away rating
-        elif home_previous.iloc[0]['away team'] == random_game['away team']:
-            away_rating = home_previous['away pi rating']
+
+        if home_previous.empty:  # if no previous rating available rating is 0
+            away_rating = 0
+        else:
+            # if rating team is home team get home rating
+            if home_previous.iloc[0]['home team'] == random_game['away team']:
+                away_rating = home_previous['home pi rating']
+            # if rating team is away team get away rating
+            elif home_previous.iloc[0]['away team'] == random_game['away team']:
+                away_rating = home_previous['away pi rating']
+
+
     elif rating == 'elo':
         # get the previous game
         home_previous = get_previous_n_games(data_league, random_game['home team'], 1, random_game)
-        # if rating team is home team get home rating
-        if home_previous.iloc[0]['home team'] == random_game['home team']:
-            home_rating = home_previous['home elo']
-        # if rating team is away team get away rating
-        elif home_previous.iloc[0]['away team'] == random_game['home team']:
-            home_rating = home_previous['away elo']
+
+        if home_previous.empty:  # if no previous rating available rating is 0
+            home_rating = 1000
+        else:
+            # if rating team is home team get home rating
+            if home_previous.iloc[0]['home team'] == random_game['home team']:
+                home_rating = home_previous['home elo']
+            # if rating team is away team get away rating
+            elif home_previous.iloc[0]['away team'] == random_game['home team']:
+                home_rating = home_previous['away elo']
 
         # get the previous game
         home_previous = get_previous_n_games(data_league, random_game['away team'], 1, random_game)
-        # if rating team is home team get home rating
-        if home_previous.iloc[0]['home team'] == random_game['away team']:
-            away_rating = home_previous['home elo']
-        # if rating team is away team get away rating
-        elif home_previous.iloc[0]['away team'] == random_game['away team']:
-            away_rating = home_previous['away elo']
+
+        if home_previous.empty:  # if no previous rating available rating is 0
+            away_rating = 1000
+        else:
+            # if rating team is home team get home rating
+            if home_previous.iloc[0]['home team'] == random_game['away team']:
+                away_rating = home_previous['home elo']
+            # if rating team is away team get away rating
+            elif home_previous.iloc[0]['away team'] == random_game['away team']:
+                away_rating = home_previous['away elo']
 
 
     elif rating == 'both':
         home_previous = get_previous_n_games(data_league, random_game['home team'], 1, random_game)
-        # get the previous game
-        home_previous.iloc[0] = get_previous_n_games(data_league, random_game['home team'], 1, random_game)
-        # if rating team is home team get home rating
-        if home_previous.iloc[0]['home team'] == random_game['home team']:
-            elo_home_rating = home_previous['home elo']
-        # if rating team is away team get away rating
-        elif home_previous.iloc[0]['away team'] == random_game['home team']:
-            elo_home_rating = home_previous['away elo']
+        if home_previous.empty:  # if no previous rating available rating is 0
+            elo_home_rating = 1000
+        else:
+            # get the previous game
+            home_previous.iloc[0] = get_previous_n_games(data_league, random_game['home team'], 1, random_game)
+            # if rating team is home team get home rating
+            if home_previous.iloc[0]['home team'] == random_game['home team']:
+                elo_home_rating = home_previous['home elo']
+            # if rating team is away team get away rating
+            elif home_previous.iloc[0]['away team'] == random_game['home team']:
+                elo_home_rating = home_previous['away elo']
 
         # get the previous game
         home_previous = get_previous_n_games(data_league, random_game['away team'], 1, random_game)
-        # if rating team is home team get home rating
-        if home_previous.iloc[0]['home team'] == random_game['away team']:
-            elo_away_rating = home_previous['home elo']
-        # if rating team is away team get away rating
-        elif home_previous.iloc[0]['away team'] == random_game['away team']:
-            elo_away_rating = home_previous['away elo']
+        if home_previous.empty:  # if no previous rating available rating is 0
+            elo_away_rating = 1000
+        else:
+            # if rating team is home team get home rating
+            if home_previous.iloc[0]['home team'] == random_game['away team']:
+                elo_away_rating = home_previous['home elo']
+            # if rating team is away team get away rating
+            elif home_previous.iloc[0]['away team'] == random_game['away team']:
+                elo_away_rating = home_previous['away elo']
 
         # get the previous game
         home_previous = get_previous_n_games(data_league, random_game['home team'], 1, random_game)
-        # if rating team is home team get home rating
-        if home_previous.iloc[0]['home team'] == random_game['home team']:
-            pi_home_rating = home_previous['home pi rating']
-        # if rating team is away team get away rating
-        elif home_previous.iloc[0]['away team'] == random_game['home team']:
-            pi_home_rating = home_previous['away pi rating']
+        if home_previous.empty:  # if no previous rating available rating is 0
+            pi_home_rating = 0
+        else:
+            # if rating team is home team get home rating
+            if home_previous.iloc[0]['home team'] == random_game['home team']:
+                pi_home_rating = home_previous['home pi rating']
+            # if rating team is away team get away rating
+            elif home_previous.iloc[0]['away team'] == random_game['home team']:
+                pi_home_rating = home_previous['away pi rating']
 
         # get the previous game
         home_previous = get_previous_n_games(data_league, random_game['away team'], 1, random_game)
-        # if rating team is home team get home rating
-        if home_previous.iloc[0]['home team'] == random_game['away team']:
-            pi_away_rating = home_previous['home pi rating']
-        # if rating team is away team get away rating
-        elif home_previous.iloc[0]['away team'] == random_game['away team']:
-            pi_away_rating = home_previous['away pi rating']
+        if home_previous.empty:  # if no previous rating available rating is 0
+            pi_away_rating = 0
+        else:
+            # if rating team is home team get home rating
+            if home_previous.iloc[0]['home team'] == random_game['away team']:
+                pi_away_rating = home_previous['home pi rating']
+            # if rating team is away team get away rating
+            elif home_previous.iloc[0]['away team'] == random_game['away team']:
+                pi_away_rating = home_previous['away pi rating']
 
         return elo_home_rating, pi_home_rating, elo_away_rating, pi_away_rating
 
@@ -652,7 +682,7 @@ def load_training_data(path):
 
 
 if __name__ == '__main__':
-    for column in ['both']:
+    for column in ['pi-rating only', 'elo only', 'both']:
         for combination in ['append', 'diff']:
             for n in range(1, 7):
                 settings = {'n': n, 'columns': column, 'rating normalisation': 'min-max',
