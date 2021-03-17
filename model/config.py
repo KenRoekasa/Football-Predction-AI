@@ -5,14 +5,17 @@ from tensorboard.plugins.hparams import api as hp
 
 INPUT_DIM = 4
 
-HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([5, 3, 10]))
+HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([5, 3]))
 HP_DROPOUT = hp.HParam('dropout', hp.Discrete([0.9]))
 HP_OPTIMISER = hp.HParam('optimiser', hp.Discrete(['sgd']))
-HP_LR = hp.HParam('learning_rate', hp.Discrete([0.005, 0.001]))
+HP_LR = hp.HParam('learning_rate', hp.Discrete([0.005]))
 HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete([16]))
-HP_MOMENTUM = hp.HParam('momentum', hp.Discrete([0.05, 0.01]))
+HP_MOMENTUM = hp.HParam('momentum', hp.Discrete([0.05]))
 HP_REGULARISER_RATE = hp.HParam('regulariser_rate', hp.Discrete([0.0006]))
 HP_ACTIVATION = hp.HParam('activation', hp.Discrete(['relu']))
+HP_previous_games = hp.HParam('num', hp.Discrete([i for i in range(1, 7)]))
+HP_combine = hp.HParam('combine', hp.Discrete(['append', 'diff']))
+HP_norm = hp.HParam('norm',hp.Discrete(['min-max','ratio']))
 
 default_columns = ['date', 'link', 'home team', 'away team', 'home score', 'away score', 'league', 'season']
 
@@ -87,7 +90,21 @@ COLUMNS = {'elo only': default_columns + ['home elo', 'away elo'],
                                             'home total conversion rate',
                                             'away total conversion rate',
                                             'home pi rating', 'away pi rating'],
-           'both': default_columns + ['home elo', 'away elo', 'home pi rating', 'away pi rating']}
+           'both': default_columns + ['home elo', 'away elo', 'home pi rating', 'away pi rating'],
+
+           'both+': default_columns + ['home total shots',
+                                       'away total shots',
+                                       'home shots on target', 'away shots on target', 'home possession',
+                                       'away possession', 'home accurate passes',
+                                       'away accurate passes', 'home tackles attempted', 'away tackles attempted',
+                                       'home tackles success %', 'away tackles success %', 'home was dribbled',
+                                       'away was dribbled',
+                                       'home interceptions',
+                                       'away interceptions', 'home dispossessed', 'away dispossessed', 'home errors',
+                                       'away errors',
+                                       'home total conversion rate',
+                                       'away total conversion rate', 'home elo', 'away elo', 'home pi rating',
+                                       'away pi rating']}
 
 
 def combination_of_means(teama_mean_array,
