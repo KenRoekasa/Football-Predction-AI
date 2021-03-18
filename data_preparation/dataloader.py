@@ -682,16 +682,15 @@ def load_training_data(path):
 
 
 if __name__ == '__main__':
-    for column in ['pi-rating only', 'elo only', 'both']:
-        for combination in ['append', 'diff']:
-            for n in range(1, 7):
-                settings = {'n': n, 'columns': column, 'rating normalisation': 'min-max',
-                            'combination': combination}
+    for combination in ['append', 'diff']:
+        for n in range(1, 7):
+            settings = {'n': n, 'columns': 'both+', 'rating normalisation': 'min-max',
+                        'combination': combination}
 
-                generate_training_data('../data/whoscored/all-leagues.csv',
-                                       '../data/whoscored/trainingdata/unnormalised/alltrainingdata-%d-%s-%s-%s.pickle' % (
-                                           settings['n'], settings['columns'], settings['rating normalisation'],
-                                           settings['combination']), settings)
+            generate_training_data('../data/whoscored/all-leagues.csv',
+                                   '../data/whoscored/trainingdata/unnormalised/alltrainingdata-%d-%s-%s-%s.pickle' % (
+                                       settings['n'], settings['columns'], settings['rating normalisation'],
+                                       settings['combination']), settings)
 
     # merge_seasons('../data/whoscored/seriea/datascraped','../all-seriea.csv')
     # merge_leagues()

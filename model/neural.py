@@ -7,9 +7,12 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import normalize
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import re
 import numpy as np
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+
 from data_preparation.dataloader import load_training_data, get_random_game, normalise_mean_array
 from tqdm import tqdm
 import tensorflow as tf
@@ -19,8 +22,12 @@ import matplotlib.pyplot as plt
 from tensorflow.python.keras import regularizers
 from tensorflow.python.keras.callbacks import ReduceLROnPlateau
 
+config = tf.compat.v1.ConfigProto(gpu_options=tf.compat.v1.GPUOptions(allow_growth=True))
+sess = tf.compat.v1.Session(config=config)
+
 
 def train_test_model(logdir, hparams):
+
     if hparams[cf.HP_OPTIMISER] == "adam":
         optimiser = tf.keras.optimizers.Adam(learning_rate=hparams[cf.HP_LR])
     elif hparams[cf.HP_OPTIMISER] == "sgd":
@@ -34,11 +41,11 @@ def train_test_model(logdir, hparams):
     else:
         raise ValueError("unexpected optimiser name: %r" % (hparams[cf.HP_OPTIMISER],))
 
-    model = tf.keras.models.Sequential()
+    model = Sequential()
 
-    model.add(tf.keras.layers.Dense(hparams[cf.HP_NUM_UNITS], activation=hparams[cf.HP_ACTIVATION]))
-    model.add(tf.keras.layers.Dense(hparams[cf.HP_NUM_UNITS], activation=hparams[cf.HP_ACTIVATION]))
-    model.add(tf.keras.layers.Dense(hparams[cf.HP_NUM_UNITS], activation=hparams[cf.HP_ACTIVATION]))
+    model.add(Dense(hparams[cf.HP_NUM_UNITS], activation=hparams[cf.HP_ACTIVATION]))
+    model.add(Dense(hparams[cf.HP_NUM_UNITS], activation=hparams[cf.HP_ACTIVATION]))
+    model.add(Dense(hparams[cf.HP_NUM_UNITS], activation=hparams[cf.HP_ACTIVATION]))
 
     # # model.add(tf.keras.layers.Dropout(hparams[cf.HP_DROPOUT]))
     # model.add(tf.keras.layers.Dense(hparams[cf.HP_NUM_UNITS], activation=hparams[cf.HP_ACTIVATION]))
@@ -86,14 +93,8 @@ def train_test_model(logdir, hparams):
 if __name__ == '__main__':
 
     EPOCHS = 250
+    print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
-    gpus = tf.config.experimental.list_physical_devices('GPU')
-
-    try:
-        for gpu in gpus:
-            tf.config.experimental.set_memory_growth(gpu, True)
-    except RuntimeError as e:
-        print(e)
 
     for numb in cf.HP_previous_games.domain.values:
         for combination in cf.HP_combine.domain.values:

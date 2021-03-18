@@ -5,7 +5,7 @@ from tensorboard.plugins.hparams import api as hp
 
 INPUT_DIM = 4
 
-HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([5, 3]))
+HP_NUM_UNITS = hp.HParam('num_units', hp.Discrete([10]))
 HP_DROPOUT = hp.HParam('dropout', hp.Discrete([0.9]))
 HP_OPTIMISER = hp.HParam('optimiser', hp.Discrete(['sgd']))
 HP_LR = hp.HParam('learning_rate', hp.Discrete([0.005]))
