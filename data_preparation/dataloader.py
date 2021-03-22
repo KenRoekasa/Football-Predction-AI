@@ -150,11 +150,11 @@ def get_random_game(csvfile):
 
 
 def get_team_home_games(table, team):
-    return table[table["home team"].str.contains(team)].sort_values(by=['date'])
+    return table[table["home team"].str.contains(team)]
 
 
 def get_team_away_games(table, team):
-    return table[table["away team"].str.contains(team)].sort_values(by=['date'])
+    return table[table["away team"].str.contains(team)]
 
 
 def get_all_team_games(table, team):
@@ -162,19 +162,19 @@ def get_all_team_games(table, team):
 
 
 def select_random_consecutive_games(table, team, n):  # select random n consecutive games
-    all_games = get_all_team_games(table, team).sort_values(by=['date'])
+    all_games = get_all_team_games(table, team)
 
     first_index = random.randrange(0, len(all_games) - n)
     return all_games.iloc[first_index:first_index + n]
 
 
 def get_previous_n_games(table, team, n, game):
-    all_games = get_all_team_games(table, team).sort_values(by=['date']).copy()
-    all_games = all_games.reset_index(drop=True)
+    all_games = get_all_team_games(table, team)
+    all_games.reset_index(drop=True, inplace=True)
 
-    # print(all_games)
-
-    index = all_games[all_games['link'] == game['link']].index[0]
+    gamelink = str(game['link'])
+    the_game = all_games[all_games['link'] == gamelink]
+    index = the_game.index[0]
 
     if index > n:
         previous = index - n
@@ -196,7 +196,8 @@ def format_data(data, settings):
 
     data_subset = data_subset.loc[:, ~data_subset.columns.duplicated()]  # removes duplicates
 
-    if settings['columns'] == 'pi-rating' or settings['columns'] == 'elo' or settings['columns'] == 'pi-rating+':
+    if settings['columns'] == 'pi-rating' or settings['columns'] == 'elo' or settings[
+        'columns'] == 'pi-rating+' or 'both' in settings['columns']:
         # remove percentages symbol
         percentage_column = ['home total conversion rate',
                              'away total conversion rate', 'home open play conversion rate',
@@ -249,7 +250,7 @@ def create_training_data(data, settings):  # TODO comment functions
 
         for season in seasons:  # get training data for each season
             data_season = data_league[data_league['season'] == season]
-
+            data_season.reset_index(drop=True, inplace=True)
             for i in range(20, len(data_season)):  # remove the first game with no previous data
 
                 random_game = data_season.iloc[i]
@@ -267,10 +268,17 @@ def create_training_data(data, settings):  # TODO comment functions
                 else:
                     classification_label = 2  # lose
 
-                away_rating, home_rating = normalise_ratings(data_league, random_game, settings)
+                teama_previous_games = get_previous_n_games(data_season, teama, n, random_game)
+                teamb_previous_games = get_previous_n_games(data_season, teamb, n, random_game)
 
-                teama_mean_array = get_mean_array(data_season, n, random_game, teama)
-                teamb_mean_array = get_mean_array(data_season, n, random_game, teamb)
+                if teama_previous_games.size == 0 | teamb_previous_games.size ==0: # if no previous games are found skip
+                    break;
+
+                away_rating, home_rating = normalise_ratings(data_league, teama, teamb, settings, teama_previous_games,
+                                                             teamb_previous_games)
+
+                teama_mean_array = get_mean_array(teama,teama_previous_games)
+                teamb_mean_array = get_mean_array(teamb,teamb_previous_games)
 
                 # append the ratings
                 teama_mean_array = numpy.append(teama_mean_array, home_rating)
@@ -286,12 +294,11 @@ def create_training_data(data, settings):  # TODO comment functions
     return training_data
 
 
-def normalise_ratings(data_league, random_game, settings):
+def normalise_ratings(data_league, teama, teamb, settings, teama_previous, teamb_previous):
     if settings['rating normalisation'] == 'min-max':
 
         if 'pi-rating' in settings['columns']:  # min max rating for ratings
-
-            home_rating, away_rating = get_ratings(data_league, random_game, 'pi rating')
+            home_rating, away_rating = get_ratings(teama, teamb, 'pi rating', teama_previous, teamb_previous)
 
             # Get the minimum value for that league
             min_rating = data_league[['home pi rating', 'away pi rating']].min().min()
@@ -303,7 +310,7 @@ def normalise_ratings(data_league, random_game, settings):
 
         elif 'elo' in settings['columns']:  # same for elo
 
-            home_rating, away_rating = get_ratings(data_league, random_game, 'elo')
+            home_rating, away_rating = get_ratings(teama, teamb, 'elo', teama_previous, teamb_previous)
 
             min_rating = data_league[['home elo', 'away elo']].min().min()
             max_rating = data_league[['home elo', 'away elo']].max().max()
@@ -313,11 +320,9 @@ def normalise_ratings(data_league, random_game, settings):
             away_rating, home_rating = min_max_normalisation(away_rating, home_rating,
                                                              max_rating, min_rating)
 
-
-
         elif 'both' in settings['columns']:  # setup both
 
-            home_rating, away_rating = get_ratings(data_league, random_game, 'pi rating')
+            home_rating, away_rating = get_ratings(teama, teamb, 'pi rating', teama_previous, teamb_previous)
 
             # Get the minimum value for that league
             pi_rating_min_rating = data_league[['home pi rating', 'away pi rating']].min().min()
@@ -333,7 +338,7 @@ def normalise_ratings(data_league, random_game, settings):
             elo_max_rating = data_league[['home elo', 'away elo']].max().max()
 
             # find max to normalise the values
-            home_rating, away_rating = get_ratings(data_league, random_game, 'elo')
+            home_rating, away_rating = get_ratings(teama, teamb, 'elo', teama_previous, teamb_previous)
             elo_away_rating, elo_home_rating = min_max_normalisation(away_rating, home_rating,
                                                                      elo_max_rating, elo_min_rating)
 
@@ -344,24 +349,20 @@ def normalise_ratings(data_league, random_game, settings):
 
         # ratio normalisation
         if 'pi-rating' in settings['columns']:
-            home_rating, away_rating = get_ratings(data_league, random_game, 'pi rating')
-
+            home_rating, away_rating = get_ratings(teama, teamb, 'pi rating', teama_previous, teamb_previous)
             away_rating, home_rating = ratio_normalisation(away_rating, home_rating)
 
         elif 'elo' in settings['columns']:  # same for elo
-
             # find max to normalise the values
-            home_rating = random_game['home elo']
-            away_rating = random_game['away elo']
-
+            home_rating, away_rating = get_ratings(teama, teamb, 'elo', teama_previous, teamb_previous)
             away_rating, home_rating = ratio_normalisation(away_rating, home_rating)
 
         elif 'both' in settings['columns']:
-            elo_home_rating = random_game['home elo']
-            elo_away_rating = random_game['away elo']
-            elo_away_rating, elo_home_rating = ratio_normalisation(elo_away_rating, elo_home_rating)
-            pi_rating_away_rating = random_game['away pi rating']
-            pi_rating_home_rating = random_game['home pi rating']
+            home_rating, away_rating = get_ratings(teama, teamb, 'pi rating', teama_previous, teamb_previous)
+            pi_rating_away_rating, pi_rating_home_rating = ratio_normalisation(away_rating, home_rating)
+
+            home_rating, away_rating = get_ratings(teama, teamb, 'elo', teama_previous, teamb_previous)
+            elo_away_rating, elo_home_rating = ratio_normalisation(away_rating, home_rating)
 
             away_rating, home_rating = [elo_away_rating, pi_rating_away_rating], [elo_home_rating,
                                                                                   pi_rating_home_rating]
@@ -370,127 +371,73 @@ def normalise_ratings(data_league, random_game, settings):
 
         # ratio normalisation
         if 'pi-rating' in settings['columns']:
-            home_rating, away_rating = get_ratings(data_league, random_game, 'pi rating')
+            home_rating, away_rating = get_ratings(teama, teamb, 'pi rating', teama_previous, teamb_previous)
 
         elif 'elo' in settings['columns']:  # same for elo
 
             # find max to normalise the values
-            home_rating = random_game['home elo']
-            away_rating = random_game['away elo']
+            home_rating, away_rating = get_ratings(teama, teamb, 'elo', teama_previous, teamb_previous)
 
     return away_rating, home_rating
 
 
-def get_ratings(data_league, random_game, rating):
+def get_ratings(home_team, away_team, rating, teama_previous, teamb_previous):
     if rating == 'pi rating':
         # get the previous game
-        home_previous = get_previous_n_games(data_league, random_game['home team'], 1, random_game)
+        home_previous = teama_previous.iloc[-1]
 
         if home_previous.empty:  # if no previous rating available rating is 0
             home_rating = 0
         else:
             # if rating team is home team get home rating
-            if home_previous.iloc[0]['home team'] == random_game['home team']:
+            if home_previous['home team'] == home_team:
                 home_rating = home_previous['home pi rating']
             # if rating team is away team get away rating
-            elif home_previous.iloc[0]['away team'] == random_game['home team']:
+            elif home_previous['away team'] == home_team:
                 home_rating = home_previous['away pi rating']
 
         # get the previous game
-        home_previous = get_previous_n_games(data_league, random_game['away team'], 1, random_game)
+        away_previous = teamb_previous.iloc[-1]
 
         if home_previous.empty:  # if no previous rating available rating is 0
             away_rating = 0
         else:
             # if rating team is home team get home rating
-            if home_previous.iloc[0]['home team'] == random_game['away team']:
-                away_rating = home_previous['home pi rating']
+            if away_previous['home team'] == away_team:
+                away_rating = away_previous['home pi rating']
             # if rating team is away team get away rating
-            elif home_previous.iloc[0]['away team'] == random_game['away team']:
-                away_rating = home_previous['away pi rating']
+            elif away_previous['away team'] == away_team:
+                away_rating = away_previous['away pi rating']
 
 
     elif rating == 'elo':
         # get the previous game
-        home_previous = get_previous_n_games(data_league, random_game['home team'], 1, random_game)
+        home_previous = teama_previous.iloc[-1]
 
         if home_previous.empty:  # if no previous rating available rating is 0
             home_rating = 1000
         else:
             # if rating team is home team get home rating
-            if home_previous.iloc[0]['home team'] == random_game['home team']:
+            if home_previous['home team'] == home_team:
                 home_rating = home_previous['home elo']
             # if rating team is away team get away rating
-            elif home_previous.iloc[0]['away team'] == random_game['home team']:
+            elif home_previous['away team'] == home_team:
                 home_rating = home_previous['away elo']
 
         # get the previous game
-        home_previous = get_previous_n_games(data_league, random_game['away team'], 1, random_game)
+        away_previous = teamb_previous.iloc[-1]
 
-        if home_previous.empty:  # if no previous rating available rating is 0
+        if away_previous.empty:  # if no previous rating available rating is 0
             away_rating = 1000
         else:
             # if rating team is home team get home rating
-            if home_previous.iloc[0]['home team'] == random_game['away team']:
-                away_rating = home_previous['home elo']
+            if away_previous['home team'] == away_team:
+                away_rating = away_previous['home elo']
             # if rating team is away team get away rating
-            elif home_previous.iloc[0]['away team'] == random_game['away team']:
-                away_rating = home_previous['away elo']
+            elif away_previous['away team'] == away_team:
+                away_rating = away_previous['away elo']
 
-
-    elif rating == 'both':
-        home_previous = get_previous_n_games(data_league, random_game['home team'], 1, random_game)
-        if home_previous.empty:  # if no previous rating available rating is 0
-            elo_home_rating = 1000
-        else:
-            # get the previous game
-            home_previous.iloc[0] = get_previous_n_games(data_league, random_game['home team'], 1, random_game)
-            # if rating team is home team get home rating
-            if home_previous.iloc[0]['home team'] == random_game['home team']:
-                elo_home_rating = home_previous['home elo']
-            # if rating team is away team get away rating
-            elif home_previous.iloc[0]['away team'] == random_game['home team']:
-                elo_home_rating = home_previous['away elo']
-
-        # get the previous game
-        home_previous = get_previous_n_games(data_league, random_game['away team'], 1, random_game)
-        if home_previous.empty:  # if no previous rating available rating is 0
-            elo_away_rating = 1000
-        else:
-            # if rating team is home team get home rating
-            if home_previous.iloc[0]['home team'] == random_game['away team']:
-                elo_away_rating = home_previous['home elo']
-            # if rating team is away team get away rating
-            elif home_previous.iloc[0]['away team'] == random_game['away team']:
-                elo_away_rating = home_previous['away elo']
-
-        # get the previous game
-        home_previous = get_previous_n_games(data_league, random_game['home team'], 1, random_game)
-        if home_previous.empty:  # if no previous rating available rating is 0
-            pi_home_rating = 0
-        else:
-            # if rating team is home team get home rating
-            if home_previous.iloc[0]['home team'] == random_game['home team']:
-                pi_home_rating = home_previous['home pi rating']
-            # if rating team is away team get away rating
-            elif home_previous.iloc[0]['away team'] == random_game['home team']:
-                pi_home_rating = home_previous['away pi rating']
-
-        # get the previous game
-        home_previous = get_previous_n_games(data_league, random_game['away team'], 1, random_game)
-        if home_previous.empty:  # if no previous rating available rating is 0
-            pi_away_rating = 0
-        else:
-            # if rating team is home team get home rating
-            if home_previous.iloc[0]['home team'] == random_game['away team']:
-                pi_away_rating = home_previous['home pi rating']
-            # if rating team is away team get away rating
-            elif home_previous.iloc[0]['away team'] == random_game['away team']:
-                pi_away_rating = home_previous['away pi rating']
-
-        return elo_home_rating, pi_home_rating, elo_away_rating, pi_away_rating
-
-    return home_rating, away_rating
+    return float(home_rating), float(away_rating)
 
 
 def min_max_normalisation(away_rating, home_rating, max_rating, min_rating):
@@ -527,10 +474,9 @@ def normalise_mean_array(teama_mean_array, teamb_mean_array, norm):
     return teama_mean_array_norm, teamb_mean_array_norm
 
 
-def get_mean_array(data_season, n, random_game, teama):
-    teama_previous_games = get_previous_n_games(data_season, teama, n, random_game)
-    teama_winstreak = get_winstreak(teama_previous_games, teama)
-    teama_mean = get_mean_stats(teama_previous_games, teama)
+def get_mean_array(team, previous_games):
+    teama_winstreak = get_winstreak(previous_games, team)
+    teama_mean = get_mean_stats(previous_games, team)
     teama_mean_array = teama_mean.array.to_numpy(copy=True)
     teama_mean_array = numpy.append(teama_mean_array, teama_winstreak)
     return teama_mean_array
@@ -633,35 +579,42 @@ def load_training_data(path):
     with open(path, "rb") as f:
         training_data = pickle.load(f)
 
-        df = pd.DataFrame(training_data)
-
-        draws = df[df[1] == 1].copy()
-        wins = df[df[1] == 0].copy()
-        loss = df[df[1] == 2].copy()
-
-        # print(len(draws))
-        # print(len(wins))
-        # print(len(loss))
-
-        # wins = wins[:-2326].copy()
-
-        wins_downsampled = resample(wins,
-                                    replace=False,  # sample without replacement
-                                    n_samples=len(draws),  # to match minority class
-                                    random_state=123)
-        loss_downsampled = resample(loss,
-                                    replace=False,  # sample without replacement
-                                    n_samples=len(draws),  # to match minority class
-                                    random_state=123)
-
-        # draws_upsampled = resample(draws, replace=True, n_samples=len(wins), random_state=123)
+        # df = pd.DataFrame(training_data)
         #
-        # loss_upsampled = resample(loss, replace=True, n_samples=len(wins), random_state=123)
-
-        frames = [wins_downsampled, draws, loss_downsampled]
-        result = pd.concat(frames)
-
-        training_data = result.values.tolist()
+        # draws = df[df[1] == 1].copy()
+        # wins = df[df[1] == 0].copy()
+        # loss = df[df[1] == 2].copy()
+        #
+        # # print(len(draws))
+        # # print(len(wins))
+        # # print(len(loss))
+        #
+        # # wins = wins[:-2326].copy()
+        # sample =0
+        # if sample == 0:
+        #
+        #     wins_downsampled = resample(wins,
+        #                                 replace=False,  # sample without replacement
+        #                                 n_samples=len(draws),  # to match minority class
+        #                                 random_state=123)
+        #     loss_downsampled = resample(loss,
+        #                                 replace=False,  # sample without replacement
+        #                                 n_samples=len(draws),  # to match minority class
+        #                                 random_state=123)
+        #
+        #     frames = [wins_downsampled, draws, loss_downsampled]
+        #
+        # else:
+        #
+        #     draws_upsampled = resample(draws, replace=True, n_samples=len(wins), random_state=123)
+        #
+        #     loss_upsampled = resample(loss, replace=True, n_samples=len(wins), random_state=123)
+        #     frames = [wins, draws_upsampled, loss_upsampled]
+        #
+        #
+        # result = pd.concat(frames)
+        #
+        # training_data = result.values.tolist()
 
         random.shuffle(training_data)
 
@@ -683,14 +636,13 @@ def load_training_data(path):
 
 if __name__ == '__main__':
     for combination in ['append', 'diff']:
-        for n in range(1, 7):
-            settings = {'n': n, 'columns': 'both+', 'rating normalisation': 'min-max',
-                        'combination': combination}
+        settings = {'n': 8, 'columns': 'pi-rating only', 'rating normalisation': 'min-max',
+                    'combination': combination}
 
-            generate_training_data('../data/whoscored/all-leagues.csv',
-                                   '../data/whoscored/trainingdata/unnormalised/alltrainingdata-%d-%s-%s-%s.pickle' % (
-                                       settings['n'], settings['columns'], settings['rating normalisation'],
-                                       settings['combination']), settings)
+        generate_training_data('../data/whoscored/all-leagues.csv',
+                               '../data/whoscored/trainingdata/unnormalised/alltrainingdata-%d-%s-%s-%s.pickle' % (
+                                   settings['n'], settings['columns'], settings['rating normalisation'],
+                                   settings['combination']), settings)
 
     # merge_seasons('../data/whoscored/seriea/datascraped','../all-seriea.csv')
     # merge_leagues()
