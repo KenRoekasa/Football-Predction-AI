@@ -1,14 +1,13 @@
 import csv
 import sys
 
-
 import json
 import pandas as pd
 
 from pi_rating import pi_rating
 
 
-def pi_rating_gen(league_csv,pi_json):
+def pi_rating_gen(league_csv, pi_json):
     pi_ratings = {}
     try:
         with open(pi_json) as json_file:
@@ -47,15 +46,18 @@ def pi_rating_gen(league_csv,pi_json):
         sorted_matches._set_value(i, 'home away pi rating', Raa)
         sorted_matches._set_value(i, 'away home pi rating', Rbh)
         sorted_matches._set_value(i, 'away away pi rating', Rba)
+
+        sorted_matches._set_value(i, 'home pi rating', float((Rah + Raa) / 2))
+        sorted_matches._set_value(i, 'away pi rating', float((Rbh + Rba) / 2))
     # write back into the csv
     sorted_matches.to_csv(league_csv, index=False)
     with open(pi_json, 'w') as fp:
         json.dump(pi_ratings, fp)
 
+
 if __name__ == '__main__':
     if len(sys.argv) == 3:
-        pi_rating_gen(sys.argv[1],sys.argv[2])
+        pi_rating_gen(sys.argv[1], sys.argv[2])
 
     else:
         print("Invalid arguments pi_rating_gen.py [csvfile] [elorating csv file name]")
-
