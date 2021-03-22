@@ -251,7 +251,7 @@ def create_training_data(data, settings):  # TODO comment functions
         for season in seasons:  # get training data for each season
             data_season = data_league[data_league['season'] == season]
             data_season.reset_index(drop=True, inplace=True)
-            for i in range(20, len(data_season)):  # remove the first game with no previous data
+            for i in range(0, len(data_season)):  # remove the first game with no previous data
 
                 random_game = data_season.iloc[i]
 
@@ -271,14 +271,14 @@ def create_training_data(data, settings):  # TODO comment functions
                 teama_previous_games = get_previous_n_games(data_season, teama, n, random_game)
                 teamb_previous_games = get_previous_n_games(data_season, teamb, n, random_game)
 
-                if teama_previous_games.size == 0 | teamb_previous_games.size ==0: # if no previous games are found skip
-                    break;
+                if teama_previous_games.size == 0 or teamb_previous_games.size == 0:  # if no previous games are found skip
+                    continue
 
                 away_rating, home_rating = normalise_ratings(data_league, teama, teamb, settings, teama_previous_games,
                                                              teamb_previous_games)
 
-                teama_mean_array = get_mean_array(teama,teama_previous_games)
-                teamb_mean_array = get_mean_array(teamb,teamb_previous_games)
+                teama_mean_array = get_mean_array(teama, teama_previous_games)
+                teamb_mean_array = get_mean_array(teamb, teamb_previous_games)
 
                 # append the ratings
                 teama_mean_array = numpy.append(teama_mean_array, home_rating)
@@ -386,56 +386,44 @@ def get_ratings(home_team, away_team, rating, teama_previous, teamb_previous):
         # get the previous game
         home_previous = teama_previous.iloc[-1]
 
-        if home_previous.empty:  # if no previous rating available rating is 0
-            home_rating = 0
-        else:
-            # if rating team is home team get home rating
-            if home_previous['home team'] == home_team:
-                home_rating = home_previous['home pi rating']
-            # if rating team is away team get away rating
-            elif home_previous['away team'] == home_team:
-                home_rating = home_previous['away pi rating']
+        # if rating team is home team get home rating
+        if home_previous['home team'] == home_team:
+            home_rating = home_previous['home pi rating']
+        # if rating team is away team get away rating
+        elif home_previous['away team'] == home_team:
+            home_rating = home_previous['away pi rating']
 
         # get the previous game
         away_previous = teamb_previous.iloc[-1]
 
-        if home_previous.empty:  # if no previous rating available rating is 0
-            away_rating = 0
-        else:
-            # if rating team is home team get home rating
-            if away_previous['home team'] == away_team:
-                away_rating = away_previous['home pi rating']
-            # if rating team is away team get away rating
-            elif away_previous['away team'] == away_team:
-                away_rating = away_previous['away pi rating']
+        # if rating team is home team get home rating
+        if away_previous['home team'] == away_team:
+            away_rating = away_previous['home pi rating']
+        # if rating team is away team get away rating
+        elif away_previous['away team'] == away_team:
+            away_rating = away_previous['away pi rating']
 
 
     elif rating == 'elo':
         # get the previous game
         home_previous = teama_previous.iloc[-1]
 
-        if home_previous.empty:  # if no previous rating available rating is 0
-            home_rating = 1000
-        else:
-            # if rating team is home team get home rating
-            if home_previous['home team'] == home_team:
-                home_rating = home_previous['home elo']
-            # if rating team is away team get away rating
-            elif home_previous['away team'] == home_team:
-                home_rating = home_previous['away elo']
+        # if rating team is home team get home rating
+        if home_previous['home team'] == home_team:
+            home_rating = home_previous['home elo']
+        # if rating team is away team get away rating
+        elif home_previous['away team'] == home_team:
+            home_rating = home_previous['away elo']
 
         # get the previous game
         away_previous = teamb_previous.iloc[-1]
 
-        if away_previous.empty:  # if no previous rating available rating is 0
-            away_rating = 1000
-        else:
-            # if rating team is home team get home rating
-            if away_previous['home team'] == away_team:
-                away_rating = away_previous['home elo']
-            # if rating team is away team get away rating
-            elif away_previous['away team'] == away_team:
-                away_rating = away_previous['away elo']
+        # if rating team is home team get home rating
+        if away_previous['home team'] == away_team:
+            away_rating = away_previous['home elo']
+        # if rating team is away team get away rating
+        elif away_previous['away team'] == away_team:
+            away_rating = away_previous['away elo']
 
     return float(home_rating), float(away_rating)
 
