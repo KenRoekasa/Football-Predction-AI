@@ -188,7 +188,7 @@ def get_previous_n_games(table, team, n, game):
 
 def format_data(data, settings):
     # Change date to date format
-    data['date'] = pd.to_datetime(data["date"], dayfirst=True, format="%d/%m/%Y")
+    data['date'] = pd.to_datetime(data["date"], dayfirst=True, format="%Y-%m-%d")
 
     # Make a subset of the table to include the fields we need
     data_subset = data[
@@ -546,7 +546,7 @@ def merge_leagues():
     data = data.append(bundesliga)
     data = data.append(seriea)
 
-    data['date'] = pd.to_datetime(data["date"], dayfirst=True)
+    data['date'] = pd.to_datetime(data["date"], dayfirst=True, format="%Y-%m-%d")
     data.sort_values(by=['date'], inplace=True)
     data.reset_index(drop=True, inplace=True)
     data.to_csv('../data/whoscored/all-leagues.csv', index=False)
@@ -624,7 +624,7 @@ def load_training_data(path):
 
 if __name__ == '__main__':
     for combination in ['append', 'diff']:
-        settings = {'n': 8, 'columns': 'pi-rating only', 'rating normalisation': 'min-max',
+        settings = {'n': 6, 'columns': 'both', 'rating normalisation': 'min-max',
                     'combination': combination}
 
         generate_training_data('../data/whoscored/all-leagues.csv',
@@ -632,5 +632,9 @@ if __name__ == '__main__':
                                    settings['n'], settings['columns'], settings['rating normalisation'],
                                    settings['combination']), settings)
 
-    # merge_seasons('../data/whoscored/seriea/datascraped','../all-seriea.csv')
+    # merge_seasons('../data/whoscored/premierleague/datascraped','../all-premierleague.csv')
+    # merge_seasons('../data/whoscored/laliga/datascraped', '../all-laliga.csv')
+    # merge_seasons('../data/whoscored/seriea/datascraped', '../all-seriea.csv')
+    # merge_seasons('../data/whoscored/bundesliga/datascraped', '../all-bundesliga.csv')
+    #
     # merge_leagues()
