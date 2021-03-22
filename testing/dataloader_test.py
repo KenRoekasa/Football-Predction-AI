@@ -115,26 +115,6 @@ class TestDataloader(unittest.TestCase):
         self.assertAlmostEqual(float(home_rating[1]), 0.760428496)
         self.assertAlmostEqual(float(away_rating[1]), 0.908354822)
 
-        settings = {'n': 3, 'columns': 'both', 'rating normalisation': 'ratio',
-                    'combination': 'append'}
-
-        data = format_data(self.data, settings)
-
-        selected_game = data[
-            data['link'] == '/Matches/1080661/MatchReport/England-Premier-League-2016-2017-Liverpool-Chelsea'].iloc[0]
-
-        teama_previous = get_previous_n_games(data, 'Liverpool', settings['n'], selected_game)
-        teamb_previous = get_previous_n_games(data, 'Chelsea', settings['n'], selected_game)
-
-        away_rating, home_rating = normalise_ratings(data, 'Liverpool', 'Chelsea', settings, teama_previous,
-                                                     teamb_previous)
-
-        self.assertAlmostEqual(float(home_rating[0]), 0.81054513)
-        self.assertAlmostEqual(float(away_rating[0]), 0.91689008)
-
-        self.assertAlmostEqual(float(home_rating[1]), 0.760428496)
-        self.assertAlmostEqual(float(away_rating[1]), 0.908354822)
-
     def test_get_mean_data(self):
         settings = {'n': 3, 'columns': 'both', 'rating normalisation': 'min-max',
                     'combination': 'append'}
