@@ -1,19 +1,18 @@
 import csv
 
 from selenium import webdriver
-
+import pandas as pd
 from bs4 import BeautifulSoup
 
-from datascraper import json_parser
 import time
 
 from selenium.common.exceptions import ElementNotVisibleException
 
-
+from jsonreader import json_parser
 
 chromepath = "chromedriver.exe"
-# driver = webdriver.Chrome(chromepath)
-driver = webdriver.Firefox()
+driver = webdriver.Chrome(chromepath)
+# driver = webdriver.Firefox()
 driver.maximize_window()
 
 
@@ -29,13 +28,14 @@ def getMatches(matches_arr, page_source):
                 teams = match.find_all('div')
                 i = match.find_all('div', class_='Section-sc-1a7xrsb-0 EventCellstyles__Status-ni00fg-2 dPpfDG')
                 if i[0].get('title') == 'FT':
-                    home_team = teams[7].text
-                    away_team = teams[8].text
-                    home_score = teams[12].text
-                    away_score = teams[13].text
-                    data = [date, home_team, away_team, match.get('data-id'), home_score, away_score]
-                    # print(data)
-                    matches_arr.append(data)
+                    match_dict = {}
+                    match_dict['home team'] = teams[7].text
+                    match_dict['away team'] = teams[8].text
+                    match_dict['home score'] = teams[12].text
+                    match_dict['away score'] = teams[13].text
+                    match_dict['date'] = date
+                    match_dict['id'] = match.get('data-id')
+                    matches_arr.append(match_dict)
     return matches_arr
 
 
@@ -46,7 +46,7 @@ cookie_button = driver.find_element_by_xpath("//*[@id='onetrust-accept-btn-handl
 
 cookie_button.click()
 
-leagues = ["england/premier-league/17", "spain/laliga/8", "germany/bundesliga/35", "italy/serie-a/23",
+leagues = ["spain/laliga/8", "germany/bundesliga/35", "italy/serie-a/23",
            "france/ligue-1/34"]  # TODO change this too
 
 for league in leagues:
@@ -57,7 +57,7 @@ for league in leagues:
     # driver.get("https://www.sofascore.com/tournament/football/england/premier-league/17")
     # driver.get("https://www.sofascore.com/tournament/football/spain/laliga/8")
 
-    for i in range(2, 7):
+    for i in range(8, 9):
 
         season_select = driver.find_element_by_xpath("//button[@class='styles__Selector-cdd802-4 iDNquT']")
 
@@ -78,14 +78,13 @@ for league in leagues:
         # print(soup)
 
         # games = soup.find_all('a')
-        matches = []
 
+        matches = []
         previous = driver.find_elements_by_xpath(
             "//div[@class='Cell-decync-0 styles__EventListHeader-b3g57w-0 bSxBJT']/div[1]")
         while len(previous) > 0:
             matches = getMatches(matches, driver.page_source)
 
-            time.sleep(2)
             # press previous
 
             # element = driver.find_element(By(("//div[@class='Cell-decync-0 styles__EventListHeader-b3g57w-0 bSxBJT']/div[1]")))
@@ -101,17 +100,24 @@ for league in leagues:
 
         print(len(matches))
 
+
+
         for match in matches:
-            match += json_parser(int(match[3]))
+            sr = json_parser(int(match['id']))
+            match.update(sr)
+
+
+        df = pd.DataFrame(data=matches)
+
+
+
 
         season = season.replace("/", "-")
         leaguename = league.replace("/", "-")
 
-        filepath = 'data/%s-%s.csv' % (leaguename, i)
+        filepath = '../data/sofascore/extra/%s-%s.csv' % (leaguename, i)
 
-        with open(filepath, 'w+', newline='') as myfile:
-            wr = csv.writer(myfile, delimiter=',')
-            wr.writerows(matches)
+        df.to_csv(filepath,index=False)
 
 driver.close()
 
