@@ -18,7 +18,7 @@ sys.path.append('..')
 import datetime
 from tensorflow.keras.layers import Dense
 
-from data_preparation.dataloader import load_training_data, get_random_game, normalise_mean_array
+from data_preparation.dataloader import load_training_data, normalise_input_array
 from tqdm import tqdm
 import tensorflow as tf
 import model.config as cf
@@ -45,8 +45,7 @@ sess = tf.compat.v1.Session(config=config)
 
 def train_test_model(logdir, hparams, x_train, y_train, x_valid, y_valid):
     if hparams[cf.HP_OPTIMISER] == "adam":
-        optimiser = tf.keras.optimizers.Adam(learning_rate=hparams[cf.HP_LR], beta_1=0.9, beta_2=0.999, epsilon=1e-07,
-                                             amsgrad=False, )
+        optimiser = tf.keras.optimizers.Adam(learning_rate=hparams[cf.HP_LR])
     elif hparams[cf.HP_OPTIMISER] == "sgd":
         optimiser = tf.keras.optimizers.SGD(lr=hparams[cf.HP_LR], momentum=hparams[cf.HP_MOMENTUM])
     elif hparams[cf.HP_OPTIMISER] == "RMSprop":
@@ -89,80 +88,26 @@ def train_test_model(logdir, hparams, x_train, y_train, x_valid, y_valid):
 
 if __name__ == '__main__':
     EPOCHS = 160
-    print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+    training_data_text = 'alltraining ratio'
 
-    numb = 10
-    combination = 'append'
-    norm = 'ratio'
+    features = ['score',
+                'total shots',
+                'shots on target', 'win streak', 'lose streak', 'pi rating', 'elo']
 
-    if combination == 'diff':
-        norm == 'min-max'  # if combination type is diff only use min max normalisation
 
-    training_data_path = '../data/whoscored/trainingdata/sum/'
-    training_data = 'alltrainingdata-%d-both andrew-min-max-%s.pickle' % (numb, combination)
+    x, y = load_training_data('../data/whoscored/trainingdata/sum/alltrainingdata.csv',
+                              [])
 
-    x_train, y_train = load_training_data(training_data_path + training_data)
+    x = normalise_input_array(x, 'ratio')
 
-    f = re.search('(append|diff)', training_data)
 
-    combination_type = f.group(0)
-
-    # if append
-    if combination == 'append':
-        size = len(x_train[0])
-
-        number_rating = 2  # this is base on how many ratings there are
-        half = int((size / 2))
-
-        x_train[:, 0:half - number_rating], x_train[:, half:-number_rating] = normalise_mean_array(
-            x_train[:, 0:half - number_rating],
-            x_train[:,
-            half:-number_rating],
-            norm)  # change normalisation type
-
-    # if min max and diff
-    if combination == 'diff':
-        x_train = normalize(x_train, axis=0, norm='max')
-
-    p = re.search('^.*(?=(\.pickle))', training_data)
-    training_data_text = p.group(0)  # get the text so i can output using the same name
-
-    data = dataset.Dataset('../data/book.csv')
-
-    # train_results = data.processed_results
-    #
-    # train_df = pd.DataFrame.from_dict(train_results)
-    #
-    # train_np = train_df.values.tolist()
-    #
-    # # split into train and test
-    #
-    # x = []  # features set
-    # y = []  # label set
-    #
-    # for i in train_np:
-    #     # balance data
-    #     x.append(i[4:])
-    #     if i[0] == 'H':
-    #         y.append(0)
-    #     elif i[0] == 'D':
-    #         y.append(1)
-    #     elif i[0] == 'A':
-    #         y.append(2)
-    #
-    # x_train = np.array(x)
-    # y_train = np.array(y)
-    #
-    # x_train = normalize(x_train, axis=1, norm='l1')
-    #
-    #
-    x_train, x_valid, y_train, y_valid = train_test_split(x_train, y_train, test_size=0.30, shuffle=True)
+    x_train, x_valid, y_train, y_valid = train_test_split(x, y, test_size=0.30, shuffle=True)
 
     # oversample
     # oversample = RandomOverSampler(sampling_strategy='minority')
     # x_train, y_train = oversample.fit_resample(x_train, y_train)
 
-    # # undersample
+    # undersample
     # undersample = RandomUnderSampler(sampling_strategy='majority')
     # x_train, y_train = undersample.fit_resample(x_train, y_train)
 
@@ -170,7 +115,7 @@ if __name__ == '__main__':
     #                                             np.unique(y_train),
     #                                             y_train)
     #
-    # class_weight = {0: weights[0], 1: weights[1], 2: weights[0]}
+    # class_weight = {0: weights[0], 1: weights[1], 2: weights[2]}
 
     print(y_train.tolist().count(0))
     print(y_train.tolist().count(1))
@@ -218,7 +163,7 @@ if __name__ == '__main__':
                                                         print({h.name: hparams[h] for h in hparams})
                                                         today = datetime.date.today()
 
-                                                        logdir = 'logs/andrew/' + str(
+                                                        logdir = 'logs/normalisation test/' + str(
                                                             today) + '/epoch' + str(
                                                             EPOCHS) + str(
                                                             datetime.datetime.now().strftime("%Y%m%d-%H%M%S")) + str(
