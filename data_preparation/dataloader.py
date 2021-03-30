@@ -5,9 +5,9 @@ import random
 
 import numpy
 import pandas as pd
-from sklearn.preprocessing import normalize
+from sklearn.preprocessing import normalize, MinMaxScaler
 from sklearn.utils import resample
-
+import tensorflow as tf
 from tqdm import tqdm
 
 import model.config as config
@@ -118,6 +118,10 @@ def create_training_data(data, settings):  # TODO comment functions
     # Split into leagues and seasons
     leagues = data['league'].unique()  # change this to the league i want
     # leagues = ['premier-league']
+    # leagues = ['seriea']
+    # leagues = ['bundesliga']
+    # leagues = ['ligue1']
+    # leagues = ['laliga']
 
     training_data = []
     pbar = tqdm(total=len(data.index))
@@ -168,7 +172,9 @@ def create_training_data(data, settings):  # TODO comment functions
                 if settings['combination'] == 'diff':
                     mean_data_array = teama_mean_array - teamb_mean_array
 
-                training_data.append([mean_data_array, classification_label])
+                final = numpy.insert(mean_data_array, 0, classification_label)
+                final = numpy.append(final, league)
+                training_data.append(final)
                 pbar.update(1)
     pbar.close()
     return training_data
@@ -324,22 +330,25 @@ def ratio_normalisation(away_rating, home_rating):
     return away_rating, home_rating
 
 
-def normalise_mean_array(teama_mean_array, teamb_mean_array, norm):
+def normalise_input_array(array, norm):
+    x = numpy.copy(array)
     if norm == 'ratio':
-        mean_array_sum = teamb_mean_array + teama_mean_array
+        mean_array_sum = array[:, 1:-4:2] + array[:, 0:-4:2]
         with numpy.errstate(divide='ignore', invalid='ignore'):
-            teama_mean_array_norm = numpy.true_divide(teama_mean_array, mean_array_sum)
-            teamb_mean_array_norm = numpy.true_divide(teamb_mean_array, mean_array_sum)
+            x[:, 0:-4:2] = numpy.true_divide(x[:, 0:-4:2], mean_array_sum)
+            x[:, 1:-4:2] = numpy.true_divide(x[:, 1:-4:2], mean_array_sum)
 
-            teama_mean_array_norm = numpy.nan_to_num(teama_mean_array_norm, nan=0.5)
+            x[:, 0:-4:2] = numpy.nan_to_num(x[:, 0:-4:2], nan=0.5)
+            x[:, 1:-4:2] = numpy.nan_to_num(x[:, 1:-4:2], nan=0.5)
 
-            teamb_mean_array_norm = numpy.nan_to_num(teamb_mean_array_norm, nan=0.5)
+    if norm == 'l1' or norm == 'l2':
+        x = normalize(x, axis=1, norm=norm)
+    elif norm == 'max':
+        scaler = MinMaxScaler()
+        scaler.fit(x[:, 0:-4])
+        x[:, 0:-4] = scaler.transform(x[:, 0:-4])
 
-    if norm == 'min-max':
-        teama_mean_array_norm = normalize(teama_mean_array, axis=0, norm='max')
-        teamb_mean_array_norm = normalize(teamb_mean_array, axis=0, norm='max')
-
-    return teama_mean_array_norm, teamb_mean_array_norm
+    return x
 
 
 def get_mean_array(team, previous_games):
@@ -356,7 +365,7 @@ def get_mean_stats(previous_games, team):
     # Get all home games
     home_games = get_team_home_games(previous_games, team)
     home_goals_conceded = home_games['away score'].to_numpy(dtype=float)
-    home_games = home_games.filter(regex='home', axis=1)  # away goals for goals conceded
+    home_games = home_games.filter(regex='home', axis=1)
 
     try:
         home_games.drop('home pi rating', axis=1, inplace=True)
@@ -368,7 +377,7 @@ def get_mean_stats(previous_games, team):
         pass
 
     home_games.drop('home team', axis=1, inplace=True)
-
+    # print(home_games.columns)
     home_mean = home_games.to_numpy(dtype=float)
     home_mean = numpy.insert(home_mean, numpy.shape(home_mean)[1], home_goals_conceded, axis=1)
 
@@ -395,6 +404,8 @@ def get_mean_stats(previous_games, team):
     # Combine away and home statistics to get the final
     combined_mean = numpy.append(home_mean, away_mean, axis=0)
     combined_mean = numpy.sum(combined_mean, axis=0)
+
+    # [columns] + goals conceded
 
     return combined_mean
 
@@ -439,48 +450,108 @@ def merge_leagues():
 
 
 # from the csv with all the data create the training data and save it to a binary file using pickle
-def generate_training_data(csv, pickle_path, settings):
+def generate_training_data(csv, path, settings):
     data = pd.read_csv(csv)
     data = format_data(data, settings)
     training_data = create_training_data(data, settings)
 
-    with open(pickle_path, 'wb+') as file:
-        pickle.dump(training_data, file)
+    df = pd.DataFrame(data=training_data, dtype=float,
+                      columns=['Outcome', 'home score', 'home total shots', 'home total conversion rate',
+                               'home open play shots', 'home open play goals',
+                               'home open play conversion rate', 'home set piece shots',
+                               'home set piece goals', 'home set piece conversion',
+                               'home counter attack shots', 'home counter attack goals',
+                               'home counter attack conversion', 'home penalty shots',
+                               'home penalty goals', 'home penalty conversion', 'home own goals shots',
+                               'home own goals goals', 'home own goals conversion',
+                               'home total passes', 'home total average pass streak', 'home crosses',
+                               'home crosses average pass streak', 'home through balls',
+                               'home through balls average streak', 'home long balls',
+                               'home long balls average streak', 'home short  passes',
+                               'home short passes average streak', 'home cards', 'home fouls',
+                               'home unprofessional', 'home dive', 'home other', 'home red cards',
+                               'home yellow cards', 'home cards per foul', 'home woodwork',
+                               'home shots on target', 'home shots off target', 'home shots blocked',
+                               'home possession', 'home touches', 'home passes success',
+                               'home accurate passes', 'home key passes', 'home dribbles won',
+                               'home dribbles attempted', 'home dribbled past', 'home dribble success',
+                               'home aerials won', 'home aerials won%', 'home offensive aerials',
+                               'home defensive aerials', 'home successful tackles',
+                               'home tackles attempted', 'home was dribbled', 'home tackles success %',
+                               'home clearances', 'home interceptions', 'home corners',
+                               'home corner accuracy', 'home dispossessed', 'home errors',
+                               'home offsides',
+                               'home goals conceded', 'home win streak', 'home lose streak', 'home elo',
+                               'home pi rating', 'away score', 'away total shots', 'away total conversion rate',
+                               'away open play shots', 'away open play goals',
+                               'away open play conversion rate', 'away set piece shots',
+                               'away set piece goals', 'away set piece conversion',
+                               'away counter attack shots', 'away counter attack goals',
+                               'away counter attack conversion', 'away penalty shots',
+                               'away penalty goals', 'away penalty conversion', 'away own goals shots',
+                               'away own goals goals', 'away own goals conversion',
+                               'away total passes', 'away total average pass streak', 'away crosses',
+                               'away crosses average pass streak', 'away through balls',
+                               'away through balls average streak', 'away long balls',
+                               'away long balls average streak', 'away short  passes',
+                               'away short passes average streak', 'away cards', 'away fouls',
+                               'away unprofessional', 'away dive', 'away other', 'away red cards',
+                               'away yellow cards', 'away cards per foul', 'away woodwork',
+                               'away shots on target', 'away shots off target', 'away shots blocked',
+                               'away possession', 'away touches', 'away passes success',
+                               'away accurate passes', 'away key passes', 'away dribbles won',
+                               'away dribbles attempted', 'away dribbled past', 'away dribble success',
+                               'away aerials won', 'away aerials won%', 'away offensive aerials',
+                               'away defensive aerials', 'away successful tackles',
+                               'away tackles attempted', 'away was dribbled', 'away tackles success %',
+                               'away clearances', 'away interceptions', 'away corners',
+                               'away corner accuracy', 'away dispossessed', 'away errors',
+                               'away offsides',
+                               'away goals conceded', 'away win streak', 'away lose streak', 'away elo',
+                               'away pi rating','league'])
+
+    df.to_csv(path, index=False)
 
 
 # load a pickle file of the training data
-def load_training_data(path):
-    with open(path, "rb") as f:
-        training_data = pickle.load(f)
+def load_training_data(path, features):
+    training_data = pd.read_csv(path, dtype='float64')
 
-        random.shuffle(training_data)
+    training_data['Outcome'] = pd.Categorical(training_data['Outcome'])
+    training_data = training_data.astype({"Outcome": int})
+    print(training_data.head())
 
-        # split into train and test
+    target = training_data.pop('Outcome')
 
-        x = []  # features set
-        y = []  # label set
+    if features != []:  # everything is included
+        temp = []
+        for f in features:
+            temp.append('home %s' % f)
+            temp.append('away %s' % f)
 
-        for features, label in training_data:
-            # balance data
-            x.append(features)
-            y.append(label)
+        training_data = training_data[temp]
 
-        X = numpy.array(x)
+    #
+    # home_pi_rating_column = training_data.pop('home pi rating')
+    # away_pi_rating_column = training_data.pop('away pi rating')
+    #
+    # home_elo_column = training_data.pop('home elo')
+    # away_elo_column = training_data.pop('away elo')
 
-        y = numpy.array(y)
-        return X, y
+    x = training_data.to_numpy()
+
+    y = target.to_numpy()
+
+    return x, y
 
 
 if __name__ == '__main__':
     for combination in ['append']:
-        for column in ['both andrew']:
+        for column in ['everything both']:
             settings = {'n': 6, 'columns': column, 'rating normalisation': 'min-max',
                         'combination': combination}
-
             generate_training_data('../data/whoscored/all-leagues.csv',
-                                   '../data/whoscored/trainingdata/sum/alltrainingdata-%d-%s-%s-%s.pickle' % (
-                                       settings['n'], settings['columns'], settings['rating normalisation'],
-                                       settings['combination']), settings)
+                                   '../data/whoscored/trainingdata/sum/alltrainingdata-%d.csv' % settings['n'],settings)
 
     # merge_seasons('../data/whoscored/premierleague/datascraped','../all-premierleague.csv')
     # merge_seasons('../data/whoscored/laliga/datascraped', '../all-laliga.csv')
