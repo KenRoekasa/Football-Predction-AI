@@ -33,7 +33,7 @@ def pi_rating_gen(league_csv, pi_json):
         bscore = row['away score']
         # print(elo_ratings)
 
-        Rah, Raa, Rbh, Rba = pi_rating(float(pi_ratings[teama]['home']), float(pi_ratings[teama]['away']),
+        Rah, Raa, Rba, Rbh = pi_rating(float(pi_ratings[teama]['home']), float(pi_ratings[teama]['away']),
                                        float(pi_ratings[teamb]['home']),
                                        float(pi_ratings[teamb]['away']), int(ascore), int(bscore))
 

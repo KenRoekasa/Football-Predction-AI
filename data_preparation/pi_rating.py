@@ -7,8 +7,8 @@ def weighted_error(e):
 
 
 def pi_rating(Rah, Raa, Rbh, Rba, a_score, b_score):
-    lambda_rate = 0.1
-    gamma = 0.3
+    lambda_rate = 0.035
+    gamma = 0.7
     b = 10
     c = 3
 
@@ -16,7 +16,11 @@ def pi_rating(Rah, Raa, Rbh, Rba, a_score, b_score):
 
     # Calculate the expected goal differences
     expected_goal_difference_a = pow(b, (math.fabs(Rah) / c)) - 1
-    expected_goal_difference_b = - (pow(b, (math.fabs(Rba) / c)) - 1)
+
+    expected_goal_difference_b = (pow(b, (math.fabs(Rba) / c)) - 1)
+
+    if Rba < 0 :
+        expected_goal_difference_b = -expected_goal_difference_b
 
     # Calculate the expected goal difference
     predicted_goal_difference = expected_goal_difference_a - expected_goal_difference_b
@@ -47,7 +51,7 @@ def pi_rating(Rah, Raa, Rbh, Rba, a_score, b_score):
 
 
 if __name__ == "__main__":
-    Rah, Raa, Rbh, Rba = pi_rating(1.6, 0.4, 0.3, -1.2, 4, 1)
+    Rah, Raa, Rbh, Rba = pi_rating(1.6, 0.4, 0.3, 1.2, 4, 1)
     print(Rah)
     print(Raa)
     print(Rbh)
