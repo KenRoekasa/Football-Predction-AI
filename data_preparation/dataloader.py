@@ -403,7 +403,7 @@ def get_mean_stats(previous_games, team):
 
     # Combine away and home statistics to get the final
     combined_mean = numpy.append(home_mean, away_mean, axis=0)
-    combined_mean = numpy.sum(combined_mean, axis=0)
+    combined_mean = numpy.mean(combined_mean, axis=0)
 
     # [columns] + goals conceded
 
@@ -467,7 +467,7 @@ def generate_training_data(csv, path, settings):
                                'home total passes', 'home total average pass streak', 'home crosses',
                                'home crosses average pass streak', 'home through balls',
                                'home through balls average streak', 'home long balls',
-                               'home long balls average streak', 'home short  passes',
+                               'home long balls average streak', 'home short passes',
                                'home short passes average streak', 'home cards', 'home fouls',
                                'home unprofessional', 'home dive', 'home other', 'home red cards',
                                'home yellow cards', 'home cards per foul', 'home woodwork',
@@ -493,7 +493,7 @@ def generate_training_data(csv, path, settings):
                                'away total passes', 'away total average pass streak', 'away crosses',
                                'away crosses average pass streak', 'away through balls',
                                'away through balls average streak', 'away long balls',
-                               'away long balls average streak', 'away short  passes',
+                               'away long balls average streak', 'away short passes',
                                'away short passes average streak', 'away cards', 'away fouls',
                                'away unprofessional', 'away dive', 'away other', 'away red cards',
                                'away yellow cards', 'away cards per foul', 'away woodwork',
@@ -508,28 +508,40 @@ def generate_training_data(csv, path, settings):
                                'away corner accuracy', 'away dispossessed', 'away errors',
                                'away offsides',
                                'away goals conceded', 'away win streak', 'away lose streak', 'away elo',
-                               'away pi rating','league'])
+                               'away pi rating', 'league'])
 
     df.to_csv(path, index=False)
 
 
 # load a pickle file of the training data
-def load_training_data(path, features):
-    training_data = pd.read_csv(path, dtype='float64')
+def load_training_data(path, features, league, return_columns=False):
+    training_data = pd.read_csv(path)
+    if league != 'all':
+        training_data = training_data[training_data['league'] == league]
 
+    training_data.drop(columns=['league'], inplace=True)
     training_data['Outcome'] = pd.Categorical(training_data['Outcome'])
     training_data = training_data.astype({"Outcome": int})
-    print(training_data.head())
 
     target = training_data.pop('Outcome')
+    training_data.astype('float64').dtypes
+
+    temp = []
 
     if features != []:  # everything is included
-        temp = []
+
         for f in features:
             temp.append('home %s' % f)
             temp.append('away %s' % f)
 
-        training_data = training_data[temp]
+
+    else:  # interleave features
+        l1 = training_data.columns[:len(training_data.columns) // 2]
+        l2 = training_data.columns[len(training_data.columns) // 2:]
+
+        temp = [val for pair in zip(l1, l2) for val in pair]
+
+    training_data = training_data[temp]
 
     #
     # home_pi_rating_column = training_data.pop('home pi rating')
@@ -542,16 +554,21 @@ def load_training_data(path, features):
 
     y = target.to_numpy()
 
+    if return_columns:
+        return x, y, temp
+
     return x, y
 
 
 if __name__ == '__main__':
     for combination in ['append']:
         for column in ['everything both']:
-            settings = {'n': 6, 'columns': column, 'rating normalisation': 'min-max',
-                        'combination': combination}
-            generate_training_data('../data/whoscored/all-leagues.csv',
-                                   '../data/whoscored/trainingdata/sum/alltrainingdata-%d.csv' % settings['n'],settings)
+            for i in range(10,0,-1):
+                settings = {'n': i, 'columns': column, 'rating normalisation': 'min-max',
+                            'combination': combination}
+                generate_training_data('../data/whoscored/all-leagues.csv',
+                                       '../data/whoscored/trainingdata/mean/alltrainingdata-%d.csv' % settings['n'],
+                                       settings)
 
     # merge_seasons('../data/whoscored/premierleague/datascraped','../all-premierleague.csv')
     # merge_seasons('../data/whoscored/laliga/datascraped', '../all-laliga.csv')
