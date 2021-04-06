@@ -127,7 +127,7 @@ class TestDataloader(unittest.TestCase):
         previous_games = get_previous_n_games(data, 'Liverpool', settings['n'], selected_game)
         array = get_mean_array('Liverpool', previous_games)
 
-        np.testing.assert_array_equal(array, [6, 6, 0, 1])
+        np.testing.assert_array_equal(array, [6/3, 6/3, 0, 1])
 
     def test_create_training_data(self):
         settings = {'n': 3, 'columns': 'both', 'rating normalisation': 'min-max',
@@ -145,7 +145,7 @@ class TestDataloader(unittest.TestCase):
                                      'away shots', 'away score'])
 
         mean_data = get_mean_stats(data, 'Chelsea')
-        np.testing.assert_array_equal(mean_data, np.array([14, 15, 20]))
+        np.testing.assert_array_equal(mean_data, np.array([14/3, 15/3, 20/3]))
 
     def test_get_losestreak(self):
         previous = pd.DataFrame(np.array([['Chelsea', 'Arsenal', 1, 2, 3, 10],

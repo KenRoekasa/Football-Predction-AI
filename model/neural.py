@@ -1,19 +1,22 @@
 import os
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+import sklearn
+
+import sys
+
+sys.path.append('..')
+from model.confusion_callback import ConfusionCallbacck
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.utils import class_weight
 
+from graphing.confusion_matrix import plot_confusion_matrix, plot_to_image
 from model import dataset
 import pandas as pd
-
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 from tensorflow.python.keras.layers import Dropout
 
 import csv
-import sys
-
-sys.path.append('..')
 
 import datetime
 from tensorflow.keras.layers import Dense
@@ -24,8 +27,7 @@ import tensorflow as tf
 import model.config as cf
 from tensorboard.plugins.hparams import api as hp
 
-import numpy
-from imblearn.over_sampling import RandomOverSampler
+from imblearn.over_sampling import RandomOverSampler, SMOTE
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import normalize
@@ -59,49 +61,74 @@ def train_test_model(logdir, hparams, x_train, y_train, x_valid, y_valid):
 
     model = tf.keras.Sequential([
         Dense(hparams[cf.HP_NUM_UNITS1], activation=hparams[cf.HP_ACTIVATION]),
+        # Dropout(hparams[cf.HP_DROPOUT]),
         Dense(hparams[cf.HP_NUM_UNITS2], activation=hparams[cf.HP_ACTIVATION]),
+        # Dropout(hparams[cf.HP_DROPOUT]),
         Dense(hparams[cf.HP_NUM_UNITS3], activation=hparams[cf.HP_ACTIVATION]),
+        # Dropout(hparams[cf.HP_DROPOUT]),
         Dense(hparams[cf.HP_NUM_UNITS4], activation=hparams[cf.HP_ACTIVATION]),
+        # Dropout(hparams[cf.HP_DROPOUT]),
         Dense(3, activation=softmax)
     ])
 
     model.compile(optimizer=optimiser, loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
                   metrics=['accuracy'])
 
+    file_writer_cm = tf.summary.create_file_writer(logdir + '/cm')
+
     callbacks = [
         tf.keras.callbacks.TensorBoard(logdir, histogram_freq=1),  # log metrics
         hp.KerasCallback(logdir, hparams),  # log hparams
+        ConfusionCallbacck(models=[model], x_valid=x_valid, y_valid=y_valid, file_writer_cm=file_writer_cm)
+
         # ReduceLROnPlateau(monitor='val_loss', factor=0.0001, patience=30)
         # tf.keras.callbacks.EarlyStopping(monitor="val_loss", mode="min", patience=50, restore_best_weights=True)
         # early stopping
     ]
 
-    model.fit(x_train, y_train, epochs=EPOCHS, batch_size=hparams[cf.HP_BATCH_SIZE], shuffle=True, verbose=1,
+    model.fit(x_train, y_train, epochs=EPOCHS, batch_size=hparams[cf.HP_BATCH_SIZE], shuffle=True, verbose=0,
               callbacks=callbacks, validation_data=(x_valid, y_valid))
 
     _, accuracy = model.evaluate(x_train, y_train)
     tf.keras.models.save_model(model,
                                logdir + '/savedmodel' + str(datetime.datetime.now().strftime("%Y%m%d-%H%M%S")))
 
-    return model
+    return 0
 
 
 if __name__ == '__main__':
     EPOCHS = 160
-    training_data_text = 'alltraining ratio'
 
-    features = ['score',
-                'total shots',
-                'shots on target', 'win streak', 'lose streak', 'pi rating', 'elo']
+    training_data_text = 'alltraining mean'
 
+    features = ['goals conceded', 'possession',
+                'shots on target', 'offensive aerials', 'defensive aerials', 'through balls', 'clearances',
+                'short  passes', 'accurate passes', 'score',
+                'total shots', 'win streak', 'lose streak', 'key passes', 'total passes',
+                'aerials won%',
+                'tackles attempted', 'tackles success %', 'dispossessed', 'fouls', 'set piece goals', 'touches',
+                'corner accuracy', 'corners', 'total conversion rate', 'open play conversion rate', 'open play shots',
+                'interceptions', 'long balls', 'crosses', 'passes success',
+                                                          'pi rating', 'elo']
 
-    x, y = load_training_data('../data/whoscored/trainingdata/sum/alltrainingdata.csv',
-                              [])
+    # features = [
+    #     'score',
+    #     'goals conceded',
+    #     'pi rating', 'elo']
+
+    x, y = load_training_data('../data/whoscored/trainingdata/mean/alltrainingdata-10.csv',
+                              [], 'all')
+
+    print(y.tolist().count(0))
+    print(y.tolist().count(1))
+    print(y.tolist().count(2))
 
     x = normalise_input_array(x, 'ratio')
 
-
     x_train, x_valid, y_train, y_valid = train_test_split(x, y, test_size=0.30, shuffle=True)
+
+    oversample = SMOTE()
+    x_train, y_train = oversample.fit_resample(x_train, y_train)
 
     # oversample
     # oversample = RandomOverSampler(sampling_strategy='minority')
@@ -115,7 +142,7 @@ if __name__ == '__main__':
     #                                             np.unique(y_train),
     #                                             y_train)
     #
-    # class_weight = {0: weights[0], 1: weights[1], 2: weights[2]}
+    #     # class_weight = {0: weights[0], 1: weights[1], 2: weights[2]}
 
     print(y_train.tolist().count(0))
     print(y_train.tolist().count(1))
@@ -130,7 +157,7 @@ if __name__ == '__main__':
     print(start_time_f)
     session_num = 0
 
-    number_of_parameters = 5
+    number_of_parameters = 10
     with tqdm(total=number_of_parameters) as pbar:
         for i in range(0, 1):  # repeats
             for optimiser in cf.HP_OPTIMISER.domain.values:
@@ -156,14 +183,14 @@ if __name__ == '__main__':
                                                             cf.HP_ACTIVATION: activation,
                                                             # cf.HP_MOMENTUM: momentum,
                                                             # cf.HP_REGULARISER_RATE: rr,
-                                                            # cf.HP_DROPOUT:dropout,
+                                                            # cf.HP_DROPOUT: dropout,
                                                         }
                                                         run_name = "run-%d" % session_num
                                                         print('--- Starting trial: %s' % run_name)
                                                         print({h.name: hparams[h] for h in hparams})
                                                         today = datetime.date.today()
 
-                                                        logdir = 'logs/normalisation test/' + str(
+                                                        logdir = 'logs/sum or mean/' + str(
                                                             today) + '/epoch' + str(
                                                             EPOCHS) + str(
                                                             datetime.datetime.now().strftime("%Y%m%d-%H%M%S")) + str(
@@ -172,22 +199,41 @@ if __name__ == '__main__':
                                                         model = train_test_model(
                                                             logdir, hparams, x_train, y_train, x_valid, y_valid)
 
-                                                        predictions = model.predict(x_valid)
-                                                        results = []
-                                                        for i in predictions:
-                                                            results.append(np.argmax(i))
-
-                                                        count = [results.count(0), results.count(1), results.count(2)]
-                                                        print(count)
-                                                        # plt.bar(['0', '1', '2'], count)
-                                                        # plt.show()
+                                                        # predictions = model.predict(x_valid)
+                                                        # results = []
+                                                        # for i in predictions:
+                                                        #     results.append(np.argmax(i))
                                                         #
-                                                        # plt.savefig(str(logdir) + '.png')
-
-                                                        with open(logdir + '/predictions.csv', 'w+') as f:
-                                                            # using csv.writer method from CSV package
-                                                            write = csv.writer(f)
-                                                            write.writerow(count)
+                                                        # print(predictions)
+                                                        # print(y_valid)
+                                                        # confusion = tf.math.confusion_matrix(labels=y_valid,
+                                                        #                                      predictions=results)
+                                                        # confusion = confusion.numpy()
+                                                        #
+                                                        # fig = plot_confusion_matrix(confusion, ['Win', 'Draw', 'Lose'])
+                                                        # cm_image = plot_to_image(fig)
+                                                        #
+                                                        #
+                                                        # file_writer_cm = tf.summary.create_file_writer(logdir + '/cm')
+                                                        # with file_writer_cm.as_default():
+                                                        #     tf.summary.image("Confusion Matrix", cm_image,step=0)
+                                                        #
+                                                        #
+                                                        # results = []
+                                                        # for i in predictions:
+                                                        #     results.append(np.argmax(i))
+                                                        #
+                                                        # count = [results.count(0), results.count(1), results.count(2)]
+                                                        # print(count)
+                                                        # # plt.bar(['0', '1', '2'], count)
+                                                        # # plt.show()
+                                                        # #
+                                                        # # plt.savefig(str(logdir) + '.png')
+                                                        #
+                                                        # with open(logdir + '/predictions.csv', 'w+') as f:
+                                                        #     # using csv.writer method from CSV package
+                                                        #     write = csv.writer(f)
+                                                        #     write.writerow(count)
                                                         pbar.update(1)
                                                         it_end_time = datetime.datetime.now()
 
