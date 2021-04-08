@@ -5,3 +5,4 @@ model/logs/
 data.rar
 model/saved_models/
 *.json
+plots/
