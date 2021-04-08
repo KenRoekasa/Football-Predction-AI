@@ -7,3 +7,4 @@ model/saved_models/
 *.json
 plots/
 logs/
+test.py
