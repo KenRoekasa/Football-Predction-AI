@@ -3,7 +3,6 @@ import time
 import numpy as np
 from tensorboard.plugins.hparams import api as hp
 
-INPUT_DIM = 4
 
 HP_NUM_UNITS1 = hp.HParam('num_units1', hp.Discrete([32]))
 HP_NUM_UNITS2 = hp.HParam('num_units2', hp.Discrete([32]))
@@ -250,8 +249,3 @@ COLUMNS = {'elo only': default_columns + ['home elo', 'away elo'],
                                                    'away total shots', 'away unprofessional', 'away was dribbled']}
 
 
-def combination_of_means(teama_mean_array,
-                         teamb_mean_array):  # How to combine the two means find the difference or put them all into the input
-    mean_data_array = np.append(teama_mean_array, teamb_mean_array)
-    # mean_data_array = teama_mean_array - teamb_mean_array
-    return mean_data_array

@@ -101,15 +101,18 @@ if __name__ == '__main__':
 
     training_data_text = 'alltraining mean'
 
-    features = ['goals conceded', 'possession',
-                'shots on target', 'offensive aerials', 'defensive aerials', 'through balls', 'clearances',
-                'short  passes', 'accurate passes', 'score',
-                'total shots', 'win streak', 'lose streak', 'key passes', 'total passes',
-                'aerials won%',
-                'tackles attempted', 'tackles success %', 'dispossessed', 'fouls', 'set piece goals', 'touches',
-                'corner accuracy', 'corners', 'total conversion rate', 'open play conversion rate', 'open play shots',
-                'interceptions', 'long balls', 'crosses', 'passes success',
-                                                          'pi rating', 'elo']
+    features = ['score', 'total shots', 'total conversion rate', 'open play shots', 'open play goals',
+                'open play conversion rate', 'set piece shots', 'set piece goals', 'set piece conversion',
+                'counter attack shots', 'counter attack goals', 'counter attack conversion', 'total passes',
+                'total average pass streak', 'crosses', 'crosses average pass streak', 'through balls',
+                'through balls average streak', 'long balls', 'long balls average streak', 'short passes',
+                'short passes average streak', 'fouls', 'red cards', 'yellow cards', 'cards per foul', 'woodwork',
+                'shots on target', 'shots off target', 'shots blocked', 'possession', 'touches', 'passes success',
+                'accurate passes', 'key passes', 'dribbles won', 'dribbles attempted', 'dribbled past',
+                'dribble success', 'aerials won', 'aerials won%', 'offensive aerials', 'defensive aerials',
+                'successful tackles', 'tackles attempted', 'was dribbled', 'tackles success %', 'clearances',
+                'interceptions', 'corners', 'corner accuracy', 'dispossessed', 'errors', 'offsides', 'goals conceded',
+                'win streak', 'lose streak', 'elo', 'pi rating']
 
     # features = [
     #     'score',
