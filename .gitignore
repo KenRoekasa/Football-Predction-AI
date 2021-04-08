@@ -6,3 +6,4 @@ data.rar
 model/saved_models/
 *.json
 plots/
+logs/
