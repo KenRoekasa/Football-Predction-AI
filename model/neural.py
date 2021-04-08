@@ -193,7 +193,7 @@ if __name__ == '__main__':
                                                         print({h.name: hparams[h] for h in hparams})
                                                         today = datetime.date.today()
 
-                                                        logdir = 'logs/sum or mean/' + str(
+                                                        logdir = '../logs/sum or mean/' + str(
                                                             today) + '/epoch' + str(
                                                             EPOCHS) + str(
                                                             datetime.datetime.now().strftime("%Y%m%d-%H%M%S")) + str(
