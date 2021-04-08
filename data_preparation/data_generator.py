@@ -6,37 +6,28 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from model import config as config
-
-
-
-
 
 class DataGenerator:
     def __init__(self, settings):
         self.settings = settings
 
-
-    def get_team_home_games(self,table, team):
+    def get_team_home_games(self, table, team):
         return table[table["home team"].str.contains(team)]
 
-
-    def get_team_away_games(self,table, team):
+    def get_team_away_games(self, table, team):
         return table[table["away team"].str.contains(team)]
 
+    def get_all_team_games(self, table, team):
+        return pd.concat([self.get_team_home_games(table, team), self.get_team_away_games(table, team)]).sort_values(
+            by=['date'])
 
-    def get_all_team_games(self,table, team):
-        return pd.concat([self.get_team_home_games(table, team), self.get_team_away_games(table, team)]).sort_values(by=['date'])
-
-
-    def select_random_consecutive_games(self,table, team, n):  # select random n consecutive games
+    def select_random_consecutive_games(self, table, team, n):  # select random n consecutive games
         all_games = self.get_all_team_games(table, team)
 
         first_index = random.randrange(0, len(all_games) - n)
         return all_games.iloc[first_index:first_index + n]
 
-
-    def get_previous_n_games(self,table, team, n, game):
+    def get_previous_n_games(self, table, team, n, game):
         all_games = self.get_all_team_games(table, team)
         all_games.reset_index(drop=True, inplace=True)
 
@@ -53,14 +44,75 @@ class DataGenerator:
         previous_games = all_games.iloc[previous:index]
         return previous_games
 
-
     def format_data(self, data):
         # Change date to date format
         data['date'] = pd.to_datetime(data["date"], dayfirst=True, format="%Y-%m-%d")
 
         # Make a subset of the table to include the fields we need
         data_subset = data[
-            config.COLUMNS[self.settings['columns']]].copy()
+            ['date', 'link', 'home team', 'away team', 'home score', 'away score', 'league', 'season',
+            'home total shots', 'away total shots', 'home total conversion rate',
+            'away total conversion rate', 'home open play shots',
+            'away open play shots',
+            'home open play goals', 'away open play goals',
+            'home open play conversion rate', 'away open play conversion rate',
+            'home set piece shots', 'away set piece shots', 'home set piece goals',
+            'away set piece goals', 'home set piece conversion',
+            'away set piece conversion', 'home counter attack shots',
+            'away counter attack shots', 'home counter attack goals',
+            'away counter attack goals', 'home counter attack conversion',
+            'away counter attack conversion', 'home penalty shots',
+            'away penalty shots',
+            'home penalty goals', 'away penalty goals', 'home penalty conversion',
+            'away penalty conversion', 'home own goals shots',
+            'away own goals shots',
+            'home own goals goals', 'away own goals goals',
+            'home own goals conversion',
+            'away own goals conversion', 'home total passes', 'away total passes',
+            'home total average pass streak', 'away total average pass streak',
+            'home crosses', 'away crosses', 'home crosses average pass streak',
+            'away crosses average pass streak', 'home through balls',
+            'away through balls', 'home through balls average streak',
+            'away through balls average streak', 'home long balls',
+            'away long balls',
+            'home long balls average streak', 'away long balls average streak',
+            'home short  passes', 'away short  passes',
+            'home short passes average streak', 'away short passes average streak',
+            'home cards', 'away cards', 'home fouls', 'away fouls',
+            'home unprofessional',
+            'away unprofessional', 'home dive', 'away dive', 'home other',
+            'away other',
+            'home red cards', 'away red cards', 'home yellow cards',
+            'away yellow cards',
+            'home cards per foul', 'away cards per foul',
+            'home woodwork', 'away woodwork', 'home shots on target',
+            'away shots on target', 'home shots off target',
+            'away shots off target',
+            'home shots blocked', 'away shots blocked', 'home possession',
+            'away possession', 'home touches', 'away touches',
+            'home passes success',
+            'away passes success',
+            'home accurate passes', 'away accurate passes', 'home key passes',
+            'away key passes', 'home dribbles won', 'away dribbles won',
+            'home dribbles attempted', 'away dribbles attempted',
+            'home dribbled past',
+            'away dribbled past', 'home dribble success', 'away dribble success',
+            'home aerials won', 'away aerials won', 'home aerials won%',
+            'away aerials won%', 'home offensive aerials',
+            'away offensive aerials',
+            'home defensive aerials', 'away defensive aerials',
+            'home successful tackles',
+            'away successful tackles', 'home tackles attempted',
+            'away tackles attempted',
+            'home was dribbled', 'away was dribbled', 'home tackles success %',
+            'away tackles success %', 'home clearances', 'away clearances',
+            'home interceptions', 'away interceptions', 'home corners',
+            'away corners',
+            'home corner accuracy', 'away corner accuracy', 'home dispossessed',
+            'away dispossessed', 'home errors', 'away errors', 'home offsides',
+            'away offsides', 'home elo', 'away elo',
+            'home pi rating',
+            'away pi rating']].copy()
 
         data_subset = data_subset.loc[:, ~data_subset.columns.duplicated()]  # removes duplicates
 
@@ -74,8 +126,7 @@ class DataGenerator:
         data_subset = data_subset.reset_index(drop=True)
         return data_subset
 
-
-    def get_winstreak(self,previous_games, team):
+    def get_winstreak(self, previous_games, team):
         counter = 0
 
         n = len(previous_games)
@@ -94,8 +145,7 @@ class DataGenerator:
 
         return counter
 
-
-    def get_losestreak(self,previous_games, team):
+    def get_losestreak(self, previous_games, team):
         counter = 0
 
         n = len(previous_games)
@@ -114,8 +164,7 @@ class DataGenerator:
 
         return counter
 
-
-    def create_training_data(self,data):  # TODO comment functions
+    def create_training_data(self, data):  # TODO comment functions
         n = self.settings['n']
         # Split into leagues and seasons
         leagues = data['league'].unique()  # change this to the league i want
@@ -155,7 +204,7 @@ class DataGenerator:
                         continue
 
                     away_rating, home_rating = self.normalise_ratings(data_league, teama, teamb, teama_previous_games,
-                                                                 teamb_previous_games)
+                                                                      teamb_previous_games)
 
                     teama_mean_array = self.get_mean_array(teama, teama_previous_games)
                     teamb_mean_array = self.get_mean_array(teamb, teamb_previous_games)
@@ -176,79 +225,44 @@ class DataGenerator:
         pbar.close()
         return training_data
 
-
-    def normalise_ratings(self,data_league, teama, teamb, teama_previous, teamb_previous):
+    def normalise_ratings(self, data_league, teama, teamb, teama_previous, teamb_previous):
         if self.settings['rating normalisation'] == 'min-max':
+            home_rating, away_rating = self.get_ratings(teama, teamb, 'pi rating', teama_previous, teamb_previous)
 
-            if 'pi-rating' in self.settings['columns']:  # min max rating for ratings
-                home_rating, away_rating = self.get_ratings(teama, teamb, 'pi rating', teama_previous, teamb_previous)
+            # Get the minimum value for that league
+            pi_rating_min_rating = data_league[['home pi rating', 'away pi rating']].min().min()
+            # Get the maximum value for that league
+            pi_rating_max_rating = data_league[['home pi rating', 'away pi rating']].max().max()
 
-                # Get the minimum value for that league
-                min_rating = data_league[['home pi rating', 'away pi rating']].min().min()
-                # Get the maximum value for that league
-                max_rating = data_league[['home pi rating', 'away pi rating']].max().max()
+            pi_rating_away_rating, pi_rating_home_rating = self.min_max_normalisation(away_rating,
+                                                                                      home_rating,
+                                                                                      pi_rating_max_rating,
+                                                                                      pi_rating_min_rating)
 
-                away_rating, home_rating = self.min_max_normalisation(away_rating, home_rating, max_rating, min_rating)
+            elo_min_rating = data_league[['home elo', 'away elo']].min().min()
+            elo_max_rating = data_league[['home elo', 'away elo']].max().max()
 
+            # find max to normalise the values
+            home_rating, away_rating = self.get_ratings(teama, teamb, 'elo', teama_previous, teamb_previous)
+            elo_away_rating, elo_home_rating = self.min_max_normalisation(away_rating, home_rating,
+                                                                          elo_max_rating, elo_min_rating)
 
-            elif 'elo' in self.settings['columns']:  # same for elo
-
-                home_rating, away_rating = self.get_ratings(teama, teamb, 'elo', teama_previous, teamb_previous)
-
-                min_rating = data_league[['home elo', 'away elo']].min().min()
-                max_rating = data_league[['home elo', 'away elo']].max().max()
-
-                # find max to normalise the values
-
-                away_rating, home_rating = self.min_max_normalisation(away_rating, home_rating,
-                                                                 max_rating, min_rating)
-
-            elif 'both' in self.settings['columns']:  # setup both
-
-                home_rating, away_rating = self.get_ratings(teama, teamb, 'pi rating', teama_previous, teamb_previous)
-
-                # Get the minimum value for that league
-                pi_rating_min_rating = data_league[['home pi rating', 'away pi rating']].min().min()
-                # Get the maximum value for that league
-                pi_rating_max_rating = data_league[['home pi rating', 'away pi rating']].max().max()
-
-                pi_rating_away_rating, pi_rating_home_rating = self.min_max_normalisation(away_rating,
-                                                                                     home_rating,
-                                                                                     pi_rating_max_rating,
-                                                                                     pi_rating_min_rating)
-
-                elo_min_rating = data_league[['home elo', 'away elo']].min().min()
-                elo_max_rating = data_league[['home elo', 'away elo']].max().max()
-
-                # find max to normalise the values
-                home_rating, away_rating = self.get_ratings(teama, teamb, 'elo', teama_previous, teamb_previous)
-                elo_away_rating, elo_home_rating = self.min_max_normalisation(away_rating, home_rating,
-                                                                         elo_max_rating, elo_min_rating)
-
-                away_rating, home_rating = [elo_away_rating, pi_rating_away_rating], [elo_home_rating,
-                                                                                      pi_rating_home_rating]
+            away_rating, home_rating = [elo_away_rating, pi_rating_away_rating], [elo_home_rating,
+                                                                                  pi_rating_home_rating]
 
         if self.settings['rating normalisation'] == 'ratio':
 
-            # ratio normalisation
-            if 'pi-rating' in self.settings['columns']:
-                home_rating, away_rating = self.get_ratings(teama, teamb, 'pi rating', teama_previous, teamb_previous)
-                away_rating, home_rating = self.ratio_normalisation(away_rating, home_rating)
 
-            elif 'elo' in settings['columns']:  # same for elo
-                # find max to normalise the values
-                home_rating, away_rating = self.get_ratings(teama, teamb, 'elo', teama_previous, teamb_previous)
-                away_rating, home_rating = self.ratio_normalisation(away_rating, home_rating)
 
-            elif 'both' in settings['columns']:
-                home_rating, away_rating = self.get_ratings(teama, teamb, 'pi rating', teama_previous, teamb_previous)
-                pi_rating_away_rating, pi_rating_home_rating = self.ratio_normalisation(away_rating, home_rating)
 
-                home_rating, away_rating = self.get_ratings(teama, teamb, 'elo', teama_previous, teamb_previous)
-                elo_away_rating, elo_home_rating = self.ratio_normalisation(away_rating, home_rating)
+            home_rating, away_rating = self.get_ratings(teama, teamb, 'pi rating', teama_previous, teamb_previous)
+            pi_rating_away_rating, pi_rating_home_rating = self.ratio_normalisation(away_rating, home_rating)
 
-                away_rating, home_rating = [elo_away_rating, pi_rating_away_rating], [elo_home_rating,
-                                                                                      pi_rating_home_rating]
+            home_rating, away_rating = self.get_ratings(teama, teamb, 'elo', teama_previous, teamb_previous)
+            elo_away_rating, elo_home_rating = self.ratio_normalisation(away_rating, home_rating)
+
+            away_rating, home_rating = [elo_away_rating, pi_rating_away_rating], [elo_home_rating,
+                                                                                  pi_rating_home_rating]
 
         if self.settings['rating normalisation'] == 'none':
 
@@ -263,8 +277,7 @@ class DataGenerator:
 
         return away_rating, home_rating
 
-
-    def get_ratings(self,home_team, away_team, rating, teama_previous, teamb_previous):
+    def get_ratings(self, home_team, away_team, rating, teama_previous, teamb_previous):
         if rating == 'pi rating':
             # get the previous game
             home_previous = teama_previous.iloc[-1]
@@ -310,14 +323,12 @@ class DataGenerator:
 
         return float(home_rating), float(away_rating)
 
-
-    def min_max_normalisation(self,away_rating, home_rating, max_rating, min_rating):
+    def min_max_normalisation(self, away_rating, home_rating, max_rating, min_rating):
         home_rating = (home_rating - min_rating) / (max_rating - min_rating)
         away_rating = (away_rating - min_rating) / (max_rating - min_rating)
         return away_rating, home_rating
 
-
-    def ratio_normalisation(self,away_rating, home_rating):
+    def ratio_normalisation(self, away_rating, home_rating):
         # find max to normalise the values
 
         sum_rating = home_rating + away_rating
@@ -326,8 +337,7 @@ class DataGenerator:
 
         return away_rating, home_rating
 
-
-    def get_mean_array(self,team, previous_games):
+    def get_mean_array(self, team, previous_games):
         winstreak = self.get_winstreak(previous_games, team)
         losestreak = self.get_losestreak(previous_games, team)
         mean = self.get_mean_stats(previous_games, team)
@@ -335,8 +345,7 @@ class DataGenerator:
         mean_array = np.append(mean_array, losestreak)
         return mean_array
 
-
-    def get_mean_stats(self,previous_games, team):
+    def get_mean_stats(self, previous_games, team):
         # Get home statistics
         # Get all home games
         home_games = self.get_team_home_games(previous_games, team)
@@ -384,7 +393,6 @@ class DataGenerator:
         # [columns] + goals conceded
 
         return combined_mean
-
 
     def generate_training_data(self, csv, path):
         data = pd.read_csv(csv)
@@ -487,17 +495,16 @@ def merge_leagues():
     data.to_csv('../data/whoscored/all-leagues.csv', index=False)
 
 
-
-
 if __name__ == '__main__':
     for combination in ['append']:
         for column in ['everything both']:
-            for i in range(10,0,-1):
-                settings = {'n': i, 'columns': column, 'rating normalisation': 'min-max',
+            for i in range(10, 0, -1):
+                settings = {'n': i, 'rating normalisation': 'min-max',
                             'combination': combination}
 
                 data_gen = DataGenerator(settings)
 
                 data_gen.generate_training_data('../data/whoscored/all-leagues.csv',
-                                       '../data/whoscored/trainingdata/mean/alltrainingdata-%d.csv' % settings['n'],
-                                       settings)
+                                                '../data/whoscored/trainingdata/mean/alltrainingdata-%d.csv' % settings[
+                                                    'n'],
+                                                settings)

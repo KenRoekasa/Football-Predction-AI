@@ -12,7 +12,7 @@ class TestDataGenerator(unittest.TestCase):
         self.data = pd.read_csv('test.csv')
 
     def test_previous_games(self):
-        settings = {'n': 3, 'columns': 'pi-rating only', 'rating normalisation': 'min-max',
+        settings = {'n': 3,'rating normalisation': 'min-max',
                     'combination': 'append'}
         data_gen = DataGenerator(settings)
         data = data_gen.format_data(data=self.data)
@@ -37,7 +37,7 @@ class TestDataGenerator(unittest.TestCase):
         np.testing.assert_array_equal(previous.values, actual_previous.values)
 
     def test_no_previous_games(self):
-        settings = {'n': 3, 'columns': 'pi-rating only', 'rating normalisation': 'min-max',
+        settings = {'n': 3, 'rating normalisation': 'min-max',
                     'combination': 'append'}
 
         data_gen = DataGenerator(settings)
@@ -51,7 +51,7 @@ class TestDataGenerator(unittest.TestCase):
         self.assertEqual(previous.size, 0)  # no previous game
 
     def test_get_winstreak(self):
-        settings = {'n': 4, 'columns': 'pi-rating only', 'rating normalisation': 'min-max',
+        settings = {'n': 4, 'rating normalisation': 'min-max',
                     'combination': 'append'}
 
         data_gen = DataGenerator(settings)
@@ -67,7 +67,7 @@ class TestDataGenerator(unittest.TestCase):
             3)
 
     def test_get_rating(self):
-        settings = {'n': 4, 'columns': 'pi-rating only', 'rating normalisation': 'min-max',
+        settings = {'n': 4, 'rating normalisation': 'min-max',
                     'combination': 'append'}
         data_gen = DataGenerator(settings)
         data = data_gen.format_data(self.data)
@@ -84,26 +84,9 @@ class TestDataGenerator(unittest.TestCase):
         self.assertAlmostEqual(float(home_rating), 1.893333329)
         self.assertAlmostEqual(float(away_rating), 2.66508901)
 
+
     def test_normalise_ratings(self):
-        settings = {'n': 4, 'columns': 'pi-rating only', 'rating normalisation': 'min-max',
-                    'combination': 'append'}
-        data_gen = DataGenerator(settings)
-        data = data_gen.format_data(self.data)
-
-        selected_game = data[
-            data['link'] == '/Matches/1080661/MatchReport/England-Premier-League-2016-2017-Liverpool-Chelsea'].iloc[0]
-
-        teama_previous = data_gen.get_previous_n_games(data, 'Liverpool', settings['n'], selected_game)
-        teamb_previous = data_gen.get_previous_n_games(data, 'Chelsea', settings['n'], selected_game)
-
-        away_rating, home_rating = data_gen.normalise_ratings(data, 'Liverpool', 'Chelsea', teama_previous,
-                                                              teamb_previous)
-
-        self.assertAlmostEqual(float(home_rating), 0.760428496)
-        self.assertAlmostEqual(float(away_rating), 0.908354822)
-
-    def test_normalise_ratings_both(self):
-        settings = {'n': 4, 'columns': 'both', 'rating normalisation': 'min-max',
+        settings = {'n': 4, 'rating normalisation': 'min-max',
                     'combination': 'append'}
 
         data_gen = DataGenerator(settings)
@@ -124,8 +107,8 @@ class TestDataGenerator(unittest.TestCase):
         self.assertAlmostEqual(float(home_rating[1]), 0.760428496)
         self.assertAlmostEqual(float(away_rating[1]), 0.908354822)
 
-    def test_get_mean_data(self):
-        settings = {'n': 3, 'columns': 'both', 'rating normalisation': 'min-max',
+    def test_get_mean_data(self): # write test that is correct
+        settings = {'n': 3, 'rating normalisation': 'min-max',
                     'combination': 'append'}
 
         data_gen = DataGenerator(settings)
@@ -140,7 +123,7 @@ class TestDataGenerator(unittest.TestCase):
         np.testing.assert_array_equal(array, [6 / 3, 6 / 3, 0, 1])
 
     def test_create_training_data(self):
-        settings = {'n': 3, 'columns': 'both', 'rating normalisation': 'min-max',
+        settings = {'n': 3, 'rating normalisation': 'min-max',
                     'combination': 'append'}
 
         data_gen = DataGenerator(settings)
