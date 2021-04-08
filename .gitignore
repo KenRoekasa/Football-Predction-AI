@@ -8,3 +8,5 @@ model/saved_models/
 plots/
 logs/
 test.py
+datascraper/datascraper_whoscored_loop.py
+/model/model/
