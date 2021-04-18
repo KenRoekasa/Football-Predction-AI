@@ -16,15 +16,16 @@ def plot_confusion_matrix(cm, class_names):
     """
 
     figure = plt.figure(figsize=(8, 8))
+    # Normalize the confusion matrix.
+    cm = np.around(cm.astype('float') / cm.sum(axis=1)[:, np.newaxis], decimals=2)
     plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
-    plt.title("Random Guessing Normalized Confusion matrix")
+    # plt.title("Confusion matrix")
     plt.colorbar()
     tick_marks = np.arange(len(class_names))
     plt.xticks(tick_marks, class_names, rotation=45)
     plt.yticks(tick_marks, class_names)
 
-    # Normalize the confusion matrix.
-    cm = np.around(cm.astype('float') / cm.sum(axis=1)[:, np.newaxis], decimals=2)
+
 
     # Use white text if squares are dark; otherwise black.
     threshold = cm.max() / 2.
