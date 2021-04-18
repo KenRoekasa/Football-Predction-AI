@@ -1,45 +1,28 @@
 import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-import sklearn
-
+from tensorflow.python.keras.layers import Dropout
+from tensorflow.python.keras.regularizers import l1
 import sys
 
 sys.path.append('..')
+from model.features_config import features_dict
 from model.confusion_callback import ConfusionCallbacck
 from imblearn.under_sampling import RandomUnderSampler
-from sklearn.utils import class_weight
-
-from graphing.confusion_matrix import plot_confusion_matrix, plot_to_image
-from model import dataset
-import pandas as pd
-
-from tensorflow.python.keras.layers import Dropout
-
-import csv
-
 import datetime
 from tensorflow.keras.layers import Dense
-
 from data_preparation.dataloader import load_training_data, normalise_input_array
 from tqdm import tqdm
 import tensorflow as tf
-import model.config as cf
-from tensorboard.plugins.hparams import api as hp
 
+import model.config as cf
+
+from model.config import n, league, features, normalisation, resample, number_of_parameters, repeats,EPOCHS
+
+from tensorboard.plugins.hparams import api as hp
 from imblearn.over_sampling import RandomOverSampler, SMOTE
 from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
-from sklearn.preprocessing import normalize
-from tensorflow.python.keras.activations import softmax, relu
-
-import re
-import numpy as np
-from tensorflow.keras.models import Sequential
-
-import matplotlib.pyplot as plt
-from tensorflow.python.keras import regularizers
-from tensorflow.python.keras.callbacks import ReduceLROnPlateau
+from tensorflow.python.keras.activations import softmax
 
 config = tf.compat.v1.ConfigProto(gpu_options=tf.compat.v1.GPUOptions(allow_growth=True))
 sess = tf.compat.v1.Session(config=config)
@@ -49,7 +32,7 @@ def train_test_model(logdir, hparams, x_train, y_train, x_valid, y_valid):
     if hparams[cf.HP_OPTIMISER] == "adam":
         optimiser = tf.keras.optimizers.Adam(learning_rate=hparams[cf.HP_LR])
     elif hparams[cf.HP_OPTIMISER] == "sgd":
-        optimiser = tf.keras.optimizers.SGD(lr=hparams[cf.HP_LR], momentum=hparams[cf.HP_MOMENTUM])
+        optimiser = tf.keras.optimizers.SGD(lr=hparams[cf.HP_LR])
     elif hparams[cf.HP_OPTIMISER] == "RMSprop":
         optimiser = tf.keras.optimizers.RMSprop(lr=hparams[cf.HP_LR])
     elif hparams[cf.HP_OPTIMISER] == "Adagrad":
@@ -97,55 +80,38 @@ def train_test_model(logdir, hparams, x_train, y_train, x_valid, y_valid):
 
 
 if __name__ == '__main__':
-    EPOCHS = 160
 
-    training_data_text = 'alltraining mean'
 
-    features = ['score', 'total shots', 'total conversion rate', 'open play shots', 'open play goals',
-                'open play conversion rate', 'set piece shots', 'set piece goals', 'set piece conversion',
-                'counter attack shots', 'counter attack goals', 'counter attack conversion', 'total passes',
-                'total average pass streak', 'crosses', 'crosses average pass streak', 'through balls',
-                'through balls average streak', 'long balls', 'long balls average streak', 'short passes',
-                'short passes average streak', 'fouls', 'red cards', 'yellow cards', 'cards per foul', 'woodwork',
-                'shots on target', 'shots off target', 'shots blocked', 'possession', 'touches', 'passes success',
-                'accurate passes', 'key passes', 'dribbles won', 'dribbles attempted', 'dribbled past',
-                'dribble success', 'aerials won', 'aerials won%', 'offensive aerials', 'defensive aerials',
-                'successful tackles', 'tackles attempted', 'was dribbled', 'tackles success %', 'clearances',
-                'interceptions', 'corners', 'corner accuracy', 'dispossessed', 'errors', 'offsides', 'goals conceded',
-                'win streak', 'lose streak', 'elo', 'pi rating']
+    x, y = load_training_data('../data/whoscored/trainingdata/mean/alltrainingdata-%d.csv' % n,
+                              features_dict['feature_importance'], league)
 
-    # features = [
-    #     'score',
-    #     'goals conceded',
-    #     'pi rating', 'elo']
-
-    x, y = load_training_data('../data/whoscored/trainingdata/mean/alltrainingdata-10.csv',
-                              [], 'all')
+    training_data_text = "%d-%s-%s-%s-%s" % (n, league, features, normalisation, resample)
 
     print(y.tolist().count(0))
     print(y.tolist().count(1))
     print(y.tolist().count(2))
 
-    x = normalise_input_array(x, 'ratio')
+    x = normalise_input_array(x, normalisation)
 
     x_train, x_valid, y_train, y_valid = train_test_split(x, y, test_size=0.30, shuffle=True)
 
-    oversample = SMOTE()
-    x_train, y_train = oversample.fit_resample(x_train, y_train)
+    if resample == 'smote':
+        oversample = SMOTE()
+        x_train, y_train = oversample.fit_resample(x_train, y_train)
+    if resample == 'oversample':
+        # oversample
+        oversample = RandomOverSampler(sampling_strategy='minority')
+        x_train, y_train = oversample.fit_resample(x_train, y_train)
+    if resample == 'undersample':
+        # undersample
+        undersample = RandomUnderSampler(sampling_strategy='majority')
+        x_train, y_train = undersample.fit_resample(x_train, y_train)
 
-    # oversample
-    # oversample = RandomOverSampler(sampling_strategy='minority')
-    # x_train, y_train = oversample.fit_resample(x_train, y_train)
-
-    # undersample
-    # undersample = RandomUnderSampler(sampling_strategy='majority')
-    # x_train, y_train = undersample.fit_resample(x_train, y_train)
-
-    # weights = class_weight.compute_class_weight('balanced',
-    #                                             np.unique(y_train),
-    #                                             y_train)
-    #
-    #     # class_weight = {0: weights[0], 1: weights[1], 2: weights[2]}
+        # weights = class_weight.compute_class_weight('balanced',
+        #                                             np.unique(y_train),
+        #                                             y_train)
+        #
+        #     # class_weight = {0: weights[0], 1: weights[1], 2: weights[2]}
 
     print(y_train.tolist().count(0))
     print(y_train.tolist().count(1))
@@ -160,9 +126,8 @@ if __name__ == '__main__':
     print(start_time_f)
     session_num = 0
 
-    number_of_parameters = 10
     with tqdm(total=number_of_parameters) as pbar:
-        for i in range(0, 1):  # repeats
+        for i in range(0, repeats):  # repeats
             for optimiser in cf.HP_OPTIMISER.domain.values:
                 for lr in cf.HP_LR.domain.values:
                     for batch_size in cf.HP_BATCH_SIZE.domain.values:
@@ -193,11 +158,12 @@ if __name__ == '__main__':
                                                         print({h.name: hparams[h] for h in hparams})
                                                         today = datetime.date.today()
 
-                                                        logdir = '../logs/sum or mean/' + str(
+                                                        logdir = '../logs/demo/' + str(
                                                             today) + '/epoch' + str(
                                                             EPOCHS) + str(
                                                             datetime.datetime.now().strftime("%Y%m%d-%H%M%S")) + str(
-                                                            training_data_text)
+                                                            training_data_text) + '-' + str(
+                                                            resample)  # +'-'+str(lr)+'-'+str(batch_size)
 
                                                         model = train_test_model(
                                                             logdir, hparams, x_train, y_train, x_valid, y_valid)
