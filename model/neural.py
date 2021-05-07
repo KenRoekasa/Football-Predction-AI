@@ -3,11 +3,12 @@ import os
 from sklearn.utils import class_weight
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-from tensorflow.python.keras.layers import Dropout
-from tensorflow.python.keras.regularizers import l1, l2
+
 import sys
 
 sys.path.append('..')
+from tensorflow.python.keras.layers import Dropout
+from tensorflow.python.keras.regularizers import l1, l2
 from model.features_config import features_dict
 from model.confusion_callback import ConfusionCallbacck
 from imblearn.under_sampling import RandomUnderSampler
@@ -18,10 +19,8 @@ from tqdm import tqdm
 import tensorflow as tf
 import numpy as np
 import model.config as cf
-
 from model.config import league, number_of_parameters, repeats, EPOCHS, \
-    detail_view, model_type
-
+    detail_view,baselogdir
 from tensorboard.plugins.hparams import api as hp
 from imblearn.over_sampling import RandomOverSampler, SMOTE
 from sklearn.model_selection import train_test_split
@@ -60,45 +59,45 @@ def train_test_model(logdir, hparams, x_train, y_train, x_valid, y_valid):
     elif model_type == 'l1':  # l1
         model = tf.keras.Sequential([
             Dense(hparams[cf.HP_NUM_UNITS1], activation=hparams[cf.HP_ACTIVATION],
-                  kernel_regularizer=l1(hparams[cf.HP_REGULARISER_RATE]),
+                  kernel_regularizer=l1(hparams[HP_REGULARISER_RATE]),
                   ),
             Dense(hparams[cf.HP_NUM_UNITS2], activation=hparams[cf.HP_ACTIVATION],
-                  kernel_regularizer=l1(hparams[cf.HP_REGULARISER_RATE])
+                  kernel_regularizer=l1(hparams[HP_REGULARISER_RATE])
                   ),
             Dense(hparams[cf.HP_NUM_UNITS3], activation=hparams[cf.HP_ACTIVATION],
-                  kernel_regularizer=l1(hparams[cf.HP_REGULARISER_RATE])
+                  kernel_regularizer=l1(hparams[HP_REGULARISER_RATE])
                   ),
             Dense(hparams[cf.HP_NUM_UNITS4], activation=hparams[cf.HP_ACTIVATION],
-                  kernel_regularizer=l1(hparams[cf.HP_REGULARISER_RATE])
+                  kernel_regularizer=l1(hparams[HP_REGULARISER_RATE])
                   ),
             Dense(3, activation=softmax)
         ])
     elif model_type == 'l2':  # l2
         model = tf.keras.Sequential([
             Dense(hparams[cf.HP_NUM_UNITS1], activation=hparams[cf.HP_ACTIVATION],
-                  kernel_regularizer=l2(hparams[cf.HP_REGULARISER_RATE]),
+                  kernel_regularizer=l2(hparams[HP_REGULARISER_RATE]),
                   ),
             Dense(hparams[cf.HP_NUM_UNITS2], activation=hparams[cf.HP_ACTIVATION],
-                  kernel_regularizer=l2(hparams[cf.HP_REGULARISER_RATE])
+                  kernel_regularizer=l2(hparams[HP_REGULARISER_RATE])
                   ),
             Dense(hparams[cf.HP_NUM_UNITS3], activation=hparams[cf.HP_ACTIVATION],
-                  kernel_regularizer=l2(hparams[cf.HP_REGULARISER_RATE])
+                  kernel_regularizer=l2(hparams[HP_REGULARISER_RATE])
                   ),
             Dense(hparams[cf.HP_NUM_UNITS4], activation=hparams[cf.HP_ACTIVATION],
-                  kernel_regularizer=l2(hparams[cf.HP_REGULARISER_RATE])
+                  kernel_regularizer=l2(hparams[HP_REGULARISER_RATE])
                   ),
             Dense(3, activation=softmax)
         ])
     elif model_type == 'dropout':  # dropout
         model = tf.keras.Sequential([
             Dense(hparams[cf.HP_NUM_UNITS1], activation=hparams[cf.HP_ACTIVATION]),
-            Dropout(hparams[cf.HP_DROPOUT]),
+            Dropout(hparams[HP_DROPOUT]),
             Dense(hparams[cf.HP_NUM_UNITS2], activation=hparams[cf.HP_ACTIVATION]),
-            Dropout(hparams[cf.HP_DROPOUT]),
+            Dropout(hparams[HP_DROPOUT]),
             Dense(hparams[cf.HP_NUM_UNITS3], activation=hparams[cf.HP_ACTIVATION]),
-            Dropout(hparams[cf.HP_DROPOUT]),
+            Dropout(hparams[HP_DROPOUT]),
             Dense(hparams[cf.HP_NUM_UNITS4], activation=hparams[cf.HP_ACTIVATION]),
-            Dropout(hparams[cf.HP_DROPOUT]),
+            Dropout(hparams[HP_DROPOUT]),
             Dense(3, activation=softmax)
         ])
 
@@ -110,10 +109,10 @@ def train_test_model(logdir, hparams, x_train, y_train, x_valid, y_valid):
     callbacks = [
         tf.keras.callbacks.TensorBoard(logdir, histogram_freq=1),  # log metrics
         hp.KerasCallback(logdir, hparams),  # log hparams
-        ConfusionCallbacck(models=[model], x_valid=x_valid, y_valid=y_valid, file_writer_cm=file_writer_cm)
+        ConfusionCallbacck(models=[model], x_valid=x_valid, y_valid=y_valid, file_writer_cm=file_writer_cm),
 
         # ReduceLROnPlateau(monitor='val_loss', factor=0.0001, patience=30)
-        # tf.keras.callbacks.EarlyStopping(monitor="val_loss", mode="min", patience=50, restore_best_weights=True)
+        # tf.keras.callbacks.EarlyStopping(monitor="val_loss", mode="min", patience=20, restore_best_weights=True)
         # early stopping
     ]
     if resample == 'class weights':
@@ -142,123 +141,147 @@ if __name__ == '__main__':
             for n in cf.HP_PREVIOUS_GAMES.domain.values:
                 for normalisation in cf.HP_NORMALISATION.domain.values:
                     for resample in cf.HP_RESAMPLING.domain.values:
-                        x, y = load_training_data('../data/whoscored/trainingdata/mean/alltrainingdata-%d.csv' % n,
-                                                  features_dict[features], league)
+                        for model_type in cf.HP_MODEL.domain.values:
 
-                        training_data_text = "%d-%s-%s-%s-%s" % (n, league, features, normalisation, resample)
+                            if model_type == 'base':
+                                HP_REGULARISER_RATE = hp.HParam('regulariser_rate', hp.Discrete([0.1]))
+                                HP_DROPOUT = hp.HParam('dropout', hp.Discrete([0.2]))
+                            if model_type == 'l1' or model_type == 'l2':
+                                # HP_REGULARISER_RATE = hp.HParam('regulariser_rate',
+                                #                                 hp.Discrete([1 * 10 ** (-exp) for exp in range(2, 6)]))
+                                HP_REGULARISER_RATE = hp.HParam('regulariser_rate',
+                                                                hp.Discrete([0.001]))
+                                HP_DROPOUT = hp.HParam('dropout', hp.Discrete([0.2]))
+                            if model_type == 'dropout':
+                                HP_REGULARISER_RATE = hp.HParam('regulariser_rate',
+                                                                hp.Discrete([0.2]))
+                                HP_DROPOUT = hp.HParam('dropout', hp.Discrete([0.2,0.25,0.3]))
+                                # HP_DROPOUT = hp.HParam('dropout', hp.Discrete([0.2]))
 
-                        print(y.tolist().count(0))
-                        print(y.tolist().count(1))
-                        print(y.tolist().count(2))
+                            x, y = load_training_data('../data/whoscored/trainingdata/mean/alltrainingdata-%d.csv' % n,
+                                                      features_dict[features], league)
 
-                        x = normalise_input_array(x, normalisation)
+                            training_data_text = "%d-%s-%s-%s-%s" % (n, league, features, normalisation, resample)
 
-                        x_train, x_valid, y_train, y_valid = train_test_split(x, y, test_size=0.30, shuffle=True)
+                            print(y.tolist().count(0))
+                            print(y.tolist().count(1))
+                            print(y.tolist().count(2))
 
-                        if resample == 'smote':
-                            oversample = SMOTE()
-                            x_train, y_train = oversample.fit_resample(x_train, y_train)
-                        if resample == 'oversample':
-                            # oversample
-                            oversample = RandomOverSampler(sampling_strategy='minority')
-                            x_train, y_train = oversample.fit_resample(x_train, y_train)
-                        if resample == 'undersample':
-                            # undersample
-                            undersample = RandomUnderSampler(sampling_strategy='majority')
-                            x_train, y_train = undersample.fit_resample(x_train, y_train)
+                            x = normalise_input_array(x, normalisation)
 
-                        print(y_train.tolist().count(0))
-                        print(y_train.tolist().count(1))
-                        print(y_train.tolist().count(2))
+                            x_train, x_valid, y_train, y_valid = train_test_split(x, y, test_size=0.30, shuffle=True)
 
-                        print(y_valid.tolist().count(0))
-                        print(y_valid.tolist().count(1))
-                        print(y_valid.tolist().count(2))
+                            if resample == 'smote':
+                                oversample = SMOTE()
+                                x_train, y_train = oversample.fit_resample(x_train, y_train)
+                            if resample == 'oversample':
+                                # oversample
+                                oversample = RandomOverSampler(sampling_strategy='minority')
+                                x_train, y_train = oversample.fit_resample(x_train, y_train)
+                            if resample == 'undersample':
+                                # undersample
+                                undersample = RandomUnderSampler(sampling_strategy='majority')
+                                x_train, y_train = undersample.fit_resample(x_train, y_train)
 
-                        session_num = 0
+                            print(y_train.tolist().count(0))
+                            print(y_train.tolist().count(1))
+                            print(y_train.tolist().count(2))
 
-                        for i in range(0, repeats):  # repeats
-                            for optimiser in cf.HP_OPTIMISER.domain.values:
-                                for lr in cf.HP_LR.domain.values:
-                                    for batch_size in cf.HP_BATCH_SIZE.domain.values:
-                                        for activation in cf.HP_ACTIVATION.domain.values:
-                                            for num_units1 in cf.HP_NUM_UNITS1.domain.values:
-                                                for num_units2 in cf.HP_NUM_UNITS2.domain.values:
-                                                    for num_units3 in cf.HP_NUM_UNITS3.domain.values:
-                                                        for num_units4 in cf.HP_NUM_UNITS4.domain.values:
-                                                            for momentum in cf.HP_MOMENTUM.domain.values:
-                                                                for rr in cf.HP_REGULARISER_RATE.domain.values:
-                                                                    for dropout in cf.HP_DROPOUT.domain.values:
-                                                                        it_start_time = datetime.datetime.now()
+                            print(y_valid.tolist().count(0))
+                            print(y_valid.tolist().count(1))
+                            print(y_valid.tolist().count(2))
 
-                                                                        if model_type == 'base':
-                                                                            hparams = {
-                                                                                cf.HP_NUM_UNITS1: num_units1,
-                                                                                cf.HP_NUM_UNITS2: num_units1,
-                                                                                cf.HP_NUM_UNITS3: num_units1,
-                                                                                cf.HP_NUM_UNITS4: num_units1,
-                                                                                cf.HP_LR: lr,
-                                                                                cf.HP_BATCH_SIZE: batch_size,
-                                                                                cf.HP_OPTIMISER: optimiser,
-                                                                                cf.HP_ACTIVATION: activation,
-                                                                                # cf.HP_MOMENTUM: momentum,
-                                                                                cf.HP_FEATURES: features,
-                                                                                cf.HP_PREVIOUS_GAMES: n,
-                                                                                cf.HP_NORMALISATION: normalisation,
-                                                                                cf.HP_RESAMPLING: resample
-                                                                            }
-                                                                        elif model_type == 'l1' or model_type == 'l2':
-                                                                            hparams = {
-                                                                                cf.HP_NUM_UNITS1: num_units1,
-                                                                                cf.HP_NUM_UNITS2: num_units1,
-                                                                                cf.HP_NUM_UNITS3: num_units1,
-                                                                                cf.HP_NUM_UNITS4: num_units1,
-                                                                                cf.HP_LR: lr,
-                                                                                cf.HP_BATCH_SIZE: batch_size,
-                                                                                cf.HP_OPTIMISER: optimiser,
-                                                                                cf.HP_ACTIVATION: activation,
-                                                                                # cf.HP_MOMENTUM: momentum,
-                                                                                cf.HP_REGULARISER_RATE: rr,
-                                                                                cf.HP_FEATURES: features,
-                                                                                cf.HP_PREVIOUS_GAMES: n,
-                                                                                cf.HP_NORMALISATION: normalisation,
-                                                                                cf.HP_RESAMPLING: resample
+                            session_num = 0
 
-                                                                            }
-                                                                        elif model_type == 'dropout':
-                                                                            hparams = {
-                                                                                cf.HP_NUM_UNITS1: num_units1,
-                                                                                cf.HP_NUM_UNITS2: num_units1,
-                                                                                cf.HP_NUM_UNITS3: num_units1,
-                                                                                cf.HP_NUM_UNITS4: num_units1,
-                                                                                cf.HP_LR: lr,
-                                                                                cf.HP_BATCH_SIZE: batch_size,
-                                                                                cf.HP_OPTIMISER: optimiser,
-                                                                                cf.HP_ACTIVATION: activation,
-                                                                                cf.HP_DROPOUT: dropout,
-                                                                                cf.HP_FEATURES: features,
-                                                                                cf.HP_PREVIOUS_GAMES: n,
-                                                                                cf.HP_NORMALISATION: normalisation,
-                                                                                cf.HP_RESAMPLING: resample
-                                                                            }
+                            for i in range(0, repeats):  # repeats
+                                for optimiser in cf.HP_OPTIMISER.domain.values:
+                                    for lr in cf.HP_LR.domain.values:
+                                        for batch_size in cf.HP_BATCH_SIZE.domain.values:
+                                            for activation in cf.HP_ACTIVATION.domain.values:
+                                                for num_units1 in cf.HP_NUM_UNITS1.domain.values:
+                                                    for num_units2 in cf.HP_NUM_UNITS2.domain.values:
+                                                        for num_units3 in cf.HP_NUM_UNITS3.domain.values:
+                                                            for num_units4 in cf.HP_NUM_UNITS4.domain.values:
+                                                                for momentum in cf.HP_MOMENTUM.domain.values:
+                                                                    for rr in HP_REGULARISER_RATE.domain.values:
+                                                                        for dropout in HP_DROPOUT.domain.values:
+                                                                            it_start_time = datetime.datetime.now()
 
-                                                                        run_name = "run-%d" % session_num
-                                                                        print('--- Starting trial: %s' % run_name)
-                                                                        print({h.name: hparams[h] for h in hparams})
-                                                                        today = datetime.date.today()
+                                                                            if model_type == 'base':
+                                                                                hparams = {
+                                                                                    cf.HP_NUM_UNITS1: num_units1,
+                                                                                    cf.HP_NUM_UNITS2: num_units1,
+                                                                                    cf.HP_NUM_UNITS3: num_units1,
+                                                                                    cf.HP_NUM_UNITS4: num_units1,
+                                                                                    cf.HP_LR: lr,
+                                                                                    cf.HP_BATCH_SIZE: batch_size,
+                                                                                    cf.HP_OPTIMISER: optimiser,
+                                                                                    cf.HP_ACTIVATION: activation,
+                                                                                    # cf.HP_MOMENTUM: momentum,
+                                                                                    cf.HP_FEATURES: features,
+                                                                                    cf.HP_PREVIOUS_GAMES: n,
+                                                                                    cf.HP_NORMALISATION: normalisation,
+                                                                                    cf.HP_RESAMPLING: resample,
+                                                                                    cf.HP_MODEL:model_type
+                                                                                }
+                                                                            elif model_type == 'l1' or model_type == 'l2':
+                                                                                hparams = {
+                                                                                    cf.HP_NUM_UNITS1: num_units1,
+                                                                                    cf.HP_NUM_UNITS2: num_units1,
+                                                                                    cf.HP_NUM_UNITS3: num_units1,
+                                                                                    cf.HP_NUM_UNITS4: num_units1,
+                                                                                    cf.HP_LR: lr,
+                                                                                    cf.HP_BATCH_SIZE: batch_size,
+                                                                                    cf.HP_OPTIMISER: optimiser,
+                                                                                    cf.HP_ACTIVATION: activation,
+                                                                                    # cf.HP_MOMENTUM: momentum,
+                                                                                    HP_REGULARISER_RATE: rr,
+                                                                                    cf.HP_FEATURES: features,
+                                                                                    cf.HP_PREVIOUS_GAMES: n,
+                                                                                    cf.HP_NORMALISATION: normalisation,
+                                                                                    cf.HP_RESAMPLING: resample,
+                                                                                    cf.HP_MODEL: model_type
 
-                                                                        logdir = '../logs/final_final/regularisation/' +str(model_type)+"/"+ str(
-                                                                            today) + '/epoch' + str(
-                                                                            EPOCHS) + str(
-                                                                            datetime.datetime.now().strftime(
-                                                                                "%Y%m%d-%H%M%S")) + str(
-                                                                            training_data_text) + '-' + '-'.join(
-                                                                            [str(lr), str(batch_size), str(optimiser)])
+                                                                                }
+                                                                            elif model_type == 'dropout':
+                                                                                hparams = {
+                                                                                    cf.HP_NUM_UNITS1: num_units1,
+                                                                                    cf.HP_NUM_UNITS2: num_units1,
+                                                                                    cf.HP_NUM_UNITS3: num_units1,
+                                                                                    cf.HP_NUM_UNITS4: num_units1,
+                                                                                    cf.HP_LR: lr,
+                                                                                    cf.HP_BATCH_SIZE: batch_size,
+                                                                                    cf.HP_OPTIMISER: optimiser,
+                                                                                    cf.HP_ACTIVATION: activation,
+                                                                                    HP_DROPOUT: dropout,
+                                                                                    cf.HP_FEATURES: features,
+                                                                                    cf.HP_PREVIOUS_GAMES: n,
+                                                                                    cf.HP_NORMALISATION: normalisation,
+                                                                                    cf.HP_RESAMPLING: resample,
+                                                                                    cf.HP_MODEL: model_type
+                                                                                }
 
-                                                                        model = train_test_model(
-                                                                            logdir, hparams, x_train, y_train, x_valid,
-                                                                            y_valid)
+                                                                            run_name = "run-%d" % session_num
+                                                                            print('--- Starting trial: %s' % run_name)
+                                                                            print({h.name: hparams[h] for h in hparams})
+                                                                            today = datetime.date.today()
 
-                                                                        pbar.update(1)
 
-                                                                        session_num += 1
+                                                                            logdir = baselogdir + str(
+                                                                                model_type) + "/" + str(
+                                                                                today) + '/epoch' + str(
+                                                                                EPOCHS) + str(
+                                                                                datetime.datetime.now().strftime(
+                                                                                    "%Y%m%d-%H%M%S")) + str(
+                                                                                training_data_text) + '-' + '-'.join(
+                                                                                [str(lr), str(batch_size),
+                                                                                 str(optimiser),str(features),str(num_units1),str(resample),str(n)])
+
+                                                                            model = train_test_model(
+                                                                                logdir, hparams, x_train, y_train,
+                                                                                x_valid,
+                                                                                y_valid)
+
+                                                                            pbar.update(1)
+
+                                                                            session_num += 1

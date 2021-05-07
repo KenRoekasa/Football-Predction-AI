@@ -3,41 +3,41 @@ import pandas as pd
 
 import os
 
-directories = ['D:/Desktop/graphs/final final/topology/order/%d/' % i for i in range(1,11)]
-print(directories)
-labels = [str(i) for i in range(1,11)]
+
+path = "D:/Desktop/graphs/final final/resample/"
+directories = [os.path.join(path,i)+'/' for i in os.listdir(path)]
+
+# labels = [str(i) for i in range(1,11)]
+labels = ['' for i in range(0,len(directories))]
 
 for idx, directory in enumerate(directories):
+    fig, (ax1, ax2) = plt.subplots(2)
     for filename in os.listdir(directory):
         if filename.endswith(".csv"):
             print(filename)
             if 'accuracy' in filename:
                 if 'train' in filename:
                     df = pd.read_csv(directory + filename)
-                    plt.figure(0)
-                    plt.plot(df['Step'], df['Value'], label='train')
+
+                    ax1.plot(df['Step'], df['Value'], label='train')
                 if 'validation' in filename:
                     df = pd.read_csv(directory + filename)
-                    plt.figure(0)
-                    plt.plot(df['Step'], df['Value'], label='validation', linestyle='dashed')
+                    ax1.plot(df['Step'], df['Value'], label='validation', linestyle='dashed')
             if 'loss' in filename:
                 if 'train' in filename:
                     df = pd.read_csv(directory + filename)
-                    plt.figure(1)
-                    plt.plot(df['Step'], df['Value'], label='train')
+
+                    ax2.plot(df['Step'], df['Value'], label='train')
                 if 'validation' in filename:
                     df = pd.read_csv(directory + filename)
-                    plt.figure(1)
-                    plt.plot(df['Step'], df['Value'], label='validation',linestyle='dashed')
 
-    plt.figure(0)
-    plt.legend()
-    plt.figure(1)
-    plt.legend()
+                    ax2.plot(df['Step'], df['Value'], label='validation',linestyle='dashed')
 
-    plt.figure(0)
-    plt.savefig(directory + str(labels[idx]) + 'accuracy.png')
-    plt.figure(1)
-    plt.savefig(directory + str(labels[idx]) + 'loss.png')
+    ax1.legend()
+    ax2.legend()
 
-    plt.show()
+    ax1.set_title('Training and Validation Accuracy')
+    ax2.set_title('Training and Validation Loss')
+    fig.tight_layout()
+    fig.savefig(os.path.join(directory, os.path.basename(directory[:-1]) + 'Both.png'))
+    fig.show()

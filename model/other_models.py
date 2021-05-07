@@ -2,6 +2,7 @@ import sys
 
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.dummy import DummyClassifier
+from sklearn.naive_bayes import GaussianNB
 from sklearn.utils import class_weight
 
 sys.path.append('..')
@@ -114,6 +115,8 @@ if __name__ == '__main__':
 
     evaluate_model(neighbors.KNeighborsClassifier(), X_train, y_train, X_test, y_test,'k-nearest neighbours')
 
+    evaluate_model(DecisionTreeClassifier(), X_train, y_train, X_test, y_test, 'Decision Tree')
+
     evaluate_model(RandomForestClassifier(min_samples_split=2, min_samples_leaf=4, max_depth=20, criterion='entropy',
                                           ),
                    X_train, y_train, X_test, y_test,'Random Forest')
@@ -134,8 +137,10 @@ if __name__ == '__main__':
     # search = model_tuned.fit(X_train, y_train)
     # print(search.best_params_)
 
-    evaluate_model(LogisticRegression(random_state=0, max_iter=500), X_train, y_train, X_test, y_test,'Logistic Regression')
+    evaluate_model(GaussianNB(), X_train, y_train, X_test, y_test,'Naive Bayes Classifier')
 
-    evaluate_model(XGBClassifier(use_label_encoder=False), X_train, y_train, X_test, y_test,'XGB Classifier')
+    # evaluate_model(LogisticRegression(random_state=0, max_iter=500), X_train, y_train, X_test, y_test,'Logistic Regression')
 
-    evaluate_model(DecisionTreeClassifier(), X_train, y_train, X_test, y_test,'Decision Tree')
+    # evaluate_model(XGBClassifier(use_label_encoder=False), X_train, y_train, X_test, y_test,'XGB Classifier')
+
+

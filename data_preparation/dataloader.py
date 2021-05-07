@@ -30,6 +30,7 @@ def normalise_input_array(array, norm):
 # load a pickle file of the training data
 def load_training_data(path, features, league, return_columns=False):
     training_data = pd.read_csv(path)
+
     if league != 'all':
         training_data = training_data[training_data['league'] == league]
 
