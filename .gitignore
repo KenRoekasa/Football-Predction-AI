@@ -10,3 +10,5 @@ logs/
 test.py
 datascraper/datascraper_whoscored_loop.py
 /model/model/
+graphing/tmp/
+all_training_logs_in_one_file.csv
